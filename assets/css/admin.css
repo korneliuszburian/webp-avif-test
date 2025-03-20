@@ -65,16 +65,57 @@
     margin-right: 15px;
 }
 
+/* Conversion button styles */
 .wp-image-optimizer-convert {
-    display: flex !important;
+    display: inline-flex !important;
     align-items: center;
     justify-content: center;
+    margin-left: 8px !important;
+    vertical-align: middle !important;
+    padding: 0 8px !important;
+    height: 28px !important;
+    line-height: 1 !important;
 }
 
-.wp-image-optimizer-convert .spinner {
-    float: none;
-    margin-top: 0;
-    margin-right: 5px;
+/* Fix spinner visibility and placement */
+.wp-image-optimizer-convert .spinner,
+.column-wp_image_optimizer .spinner {
+    display: block !important;
+    margin: 0 5px 0 0 !important;
+    float: none !important;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.2s;
+    background-size: 16px 16px;
+    width: 16px !important;
+    height: 16px !important;
+    padding: 0 !important;
+}
+
+/* Show spinner when active */
+.wp-image-optimizer-convert .spinner.is-active,
+.column-wp_image_optimizer .spinner.is-active {
+    visibility: visible !important;
+    opacity: 1;
+}
+
+/* Media list view styles */
+.column-wp_image_optimizer {
+    display: flex !important;
+    align-items: center;
+    white-space: nowrap;
+}
+
+.column-wp_image_optimizer .dashicons {
+    margin-right: 4px;
+    vertical-align: middle;
+}
+
+.column-wp_image_optimizer button.wp-image-optimizer-convert {
+    position: relative;
+    display: inline-flex !important;
+    align-items: center;
+    margin-left: 8px !important;
 }
 
 /* Dashboard widget */

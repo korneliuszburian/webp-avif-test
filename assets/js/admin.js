@@ -119,7 +119,7 @@
             }
             
             $button.prop('disabled', true);
-            $spinner.addClass('is-active');
+            $spinner.addClass('is-active').css('visibility', 'visible');
             
             $.ajax({
                 url: wpImageOptimizer.ajax_url,
@@ -131,7 +131,7 @@
                 },
                 success: function(response) {
                     console.log('Conversion response:', response);
-                    $spinner.removeClass('is-active');
+                    $spinner.removeClass('is-active').css('visibility', 'hidden');
                     
                     if (response.success) {
                         $button.text(wpImageOptimizer.i18n.converted || 'Converted');
@@ -156,7 +156,7 @@
                 },
                 error: function(xhr, status, error) {
                     console.error('Ajax error:', xhr, status, error);
-                    $spinner.removeClass('is-active');
+                    $spinner.removeClass('is-active').css('visibility', 'hidden');
                     $button.text(wpImageOptimizer.i18n.error || 'Error');
                     setTimeout(function() {
                         $button.prop('disabled', false).text(wpImageOptimizer.i18n.convert || 'Convert Now');

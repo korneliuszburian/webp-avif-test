@@ -117,25 +117,27 @@ class MediaLibraryIntegration {
 		$hasWebp = ! empty( $meta['webp_path'] ) && file_exists( $meta['webp_path'] );
 		$hasAvif = ! empty( $meta['avif_path'] ) && file_exists( $meta['avif_path'] );
 		
-		$html = '';
-
+		// Create a wrapper div for better layout
+		echo '<div class="wp-image-optimizer-column-content">';
+		
+		// Format indicators
 		if ( $hasWebp && $hasAvif ) {
-			$html = '<span class="dashicons dashicons-yes-alt" style="color:green;" title="' . esc_attr__( 'Both WebP and AVIF versions available', 'wp-image-optimizer' ) . '"></span>';
+			echo '<span class="dashicons dashicons-yes-alt" style="color:green;" title="' . esc_attr__( 'Both WebP and AVIF versions available', 'wp-image-optimizer' ) . '"></span>';
 		} elseif ( $hasWebp ) {
-			$html = '<span class="dashicons dashicons-yes" style="color:orange;" title="' . esc_attr__( 'WebP version available', 'wp-image-optimizer' ) . '"></span>';
+			echo '<span class="dashicons dashicons-yes" style="color:orange;" title="' . esc_attr__( 'WebP version available', 'wp-image-optimizer' ) . '"></span>';
 		} elseif ( $hasAvif ) {
-			$html = '<span class="dashicons dashicons-yes" style="color:blue;" title="' . esc_attr__( 'AVIF version available', 'wp-image-optimizer' ) . '"></span>';
+			echo '<span class="dashicons dashicons-yes" style="color:blue;" title="' . esc_attr__( 'AVIF version available', 'wp-image-optimizer' ) . '"></span>';
 		} else {
-			$html = '<span class="dashicons dashicons-no" style="color:red;" title="' . esc_attr__( 'No optimized versions available', 'wp-image-optimizer' ) . '"></span>';
+			echo '<span class="dashicons dashicons-no" style="color:red;" title="' . esc_attr__( 'No optimized versions available', 'wp-image-optimizer' ) . '"></span>';
 		}
 		
-		// Add convert button in the grid view
-		$html .= ' <button type="button" class="button wp-image-optimizer-convert" data-id="' . esc_attr($post_id) . '">';
-        $html .= '<span class="spinner" style="float:none;margin-top:0;margin-right:4px;"></span>';
-        $html .= __('Convert', 'wp-image-optimizer');
-        $html .= '</button>';
+		// Simplified convert button in the grid view
+		echo '<button type="button" class="button button-small wp-image-optimizer-convert" data-id="' . esc_attr($post_id) . '">';
+        echo '<span class="spinner"></span>';
+        echo __('Convert', 'wp-image-optimizer');
+        echo '</button>';
         
-        echo $html;
+        echo '</div>';
 	}
 
 	/**
@@ -292,7 +294,7 @@ class MediaLibraryIntegration {
 
 		// Convert button
 		$html .= '<button type="button" class="button wp-image-optimizer-convert" data-id="' . esc_attr( $attachment_id ) . '">';
-		$html .= '<span class="spinner" style="float:none;margin-top:0;margin-right:4px;"></span> ';
+		$html .= '<span class="spinner"></span>';
 		$html .= __( 'Convert Now', 'wp-image-optimizer' );
 		$html .= '</button>';
 
