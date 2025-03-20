@@ -8,6 +8,11 @@ on:
   pull_request:
     branches: [ main ]
 
+# Set permissions for GitHub token
+permissions:
+  contents: write    # This is required for actions/checkout and creating releases
+  packages: write    # This is required for publishing packages
+
 jobs:
   validate:
     name: Validate Code
@@ -55,23 +60,12 @@ jobs:
           cd build
           zip -r wp-image-optimizer-${{ steps.get_version.outputs.VERSION }}.zip wp-image-optimizer
 
-      - name: Create GitHub Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ steps.get_version.outputs.VERSION }}
-          draft: false
-          prerelease: false
-
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./build/wp-image-optimizer-${{ steps.get_version.outputs.VERSION }}.zip
-          asset_name: wp-image-optimizer-${{ steps.get_version.outputs.VERSION }}.zip
-          asset_content_type: application/zip
+          files: ./build/wp-image-optimizer-${{ steps.get_version.outputs.VERSION }}.zip
+          name: Release ${{ steps.get_version.outputs.VERSION }}
+          body: |
+            ## WebP & AVIF Image Optimizer ${{ steps.get_version.outputs.VERSION }}
+            
+            See [CHANGELOG.md](CHANGELOG.md) for details.
