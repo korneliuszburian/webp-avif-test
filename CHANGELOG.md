@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.0.14] - 2025-03-20
+
+- Feature: ✨ Add completion message for release creation in workflow
+
+
 ## [1.0.13] - 2025-03-20
 
 - Code Refactoring: ♻️ Improve release-info.json generation using jq for safety
