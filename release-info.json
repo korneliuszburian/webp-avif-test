@@ -1,8 +1,8 @@
 {
   "name": "WebP & AVIF Image Optimizer",
   "slug": "wp-image-optimizer",
-  "author": "<a href='https://your-website.com/'>Your Name</a>",
-  "author_profile": "https://github.com/your-username",
+  "author": "<a href='https://github.com/korneliuszburian'>Korneliusz Burian</a>",
+  "author_profile": "https://github.com/korneliuszburian",
   "requires": "5.6",
   "tested": "6.7",
   "requires_php": "8.1",
@@ -12,7 +12,7 @@
   "support_threads_resolved": 0,
   "last_updated": "2025-03-20 00:00:00",
   "added": "2025-01-01 00:00:00",
-  "homepage": "https://github.com/your-username/webp-avif-test",
+  "homepage": "https://github.com/korneliuszburian/webp-avif-test",
   "sections": {
     "description": "High-performance WebP and AVIF image conversion plugin for WordPress.",
     "installation": "Upload the plugin to your WordPress site and activate it. Configure settings from the 'Settings > WebP & AVIF' menu.",
@@ -23,13 +23,13 @@
     "high": "https://example.com/banner-1544x500.png"
   },
   "icons": {
-    "1x": "https://example.com/icon-128x128.png",
-    "2x": "https://example.com/icon-256x256.png"
+    "1x": "https://raw.githubusercontent.com/korneliuszburian/webp-avif-test/master/assets/icon-128x128.png",
+    "2x": "https://raw.githubusercontent.com/korneliuszburian/webp-avif-test/master/assets/icon-256x256.png"
   },
   "versions": {
     "1.0.0": {
       "version": "1.0.0",
-      "zip_url": "https://github.com/your-username/webp-avif-test/releases/download/v1.0.0/wp-image-optimizer.zip",
+      "zip_url": "https://github.com/korneliuszburian/webp-avif-test/releases/download/v1.0.0/wp-image-optimizer.zip",
       "requires": "5.6",
       "tested": "6.7",
       "requires_php": "8.1",

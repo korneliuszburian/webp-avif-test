@@ -37,7 +37,7 @@ $releaseInfo['last_updated'] = date('Y-m-d H:i:s');
 // Add the new version to the versions list
 $releaseInfo['versions'][$version] = [
     'version' => $version,
-    'zip_url' => "https://github.com/your-username/webp-avif-test/releases/download/v{$version}/wp-image-optimizer.zip",
+    'zip_url' => "https://github.com/korneliuszburian/webp-avif-test/releases/download/v{$version}/wp-image-optimizer.zip",
     'requires' => $releaseInfo['requires'],
     'tested' => $releaseInfo['tested'],
     'requires_php' => $releaseInfo['requires_php'],

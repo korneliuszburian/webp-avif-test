@@ -4,7 +4,9 @@
   "description": "WordPress WebP & AVIF Image Optimizer",
   "private": true,
   "scripts": {
-    "build": "composer install --no-dev --optimize-autoloader && node scripts/build.js"
+    "build": "composer install --no-dev --optimize-autoloader && node scripts/build.js",
+    "release": "node scripts/create-release.js",
+    "version": "node scripts/check-version.js"
   },
   "devDependencies": {
     "archiver": "^6.0.1"
