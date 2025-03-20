@@ -1,79 +1,96 @@
-name: Build & Release Plugin
+name: Build & Release
 
 on:
   push:
     tags:
       - 'v*.*.*'
 
-# Set permissions for GitHub token
 permissions:
   contents: write
-  packages: write
 
 jobs:
   build:
-    name: Build Plugin Package
+    name: Build & Release
     runs-on: ubuntu-latest
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Important for proper versioning
+          fetch-depth: 0
 
-      - name: Get the version
+      - name: Get version
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.1'
+          php-version: ${{ vars.PLUGIN_REQUIRES_PHP || '8.1' }}
           extensions: gd, imagick, mbstring
           tools: composer:v2
           coverage: none
 
-      - name: Install Composer dependencies
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
         run: |
           composer install --no-dev --optimize-autoloader
+          npm ci
 
       - name: Update version in plugin file
         run: |
           sed -i "s/Version: .*/Version: ${{ steps.get_version.outputs.VERSION }}/" wp-image-optimizer.php
           sed -i "s/define( 'WP_IMAGE_OPTIMIZER_VERSION', '.*' );/define( 'WP_IMAGE_OPTIMIZER_VERSION', '${{ steps.get_version.outputs.VERSION }}' );/" wp-image-optimizer.php
 
-      - name: Create build directory
-        run: |
-          mkdir -p build
-
-      - name: Create plugin zip with correct filename
-        run: |
-          # Create zip with the right name for the plugin updater
-          zip -r build/wp-image-optimizer.zip . -x ".git/*" ".github/*" ".vscode/*" "build/*" "node_modules/*" ".distignore" ".gitignore" "phpcs.xml.dist" "phpstan.neon" "composer.json" "composer.lock" "README.md" "bin/*" "tests/*"
+      - name: Build plugin
+        run: npm run build
 
       - name: Update release info file
+        env:
+          PLUGIN_NAME: ${{ vars.PLUGIN_NAME || 'WebP & AVIF Image Optimizer' }}
+          PLUGIN_SLUG: ${{ vars.PLUGIN_SLUG || 'wp-image-optimizer' }}
+          PLUGIN_REQUIRES: ${{ vars.PLUGIN_REQUIRES || '5.8' }}
+          PLUGIN_TESTED: ${{ vars.PLUGIN_TESTED || '6.7' }}
+          PLUGIN_REQUIRES_PHP: ${{ vars.PLUGIN_REQUIRES_PHP || '8.1' }}
         run: |
-          php bin/update-release-info.php ${{ steps.get_version.outputs.VERSION }} $(date -I)
-
-      # Fix: Checkout main branch before pushing
-      - name: Checkout main branch
-        run: |
-          git fetch origin
-          git checkout main
-          
-      - name: Update release info file on main
-        run: |
-          # Apply the same changes to the release-info.json file in the main branch
-          php bin/update-release-info.php ${{ steps.get_version.outputs.VERSION }} $(date -I)
-          
-      # Fix: Properly configure git for commit
-      - name: Commit and push release info
-        run: |
-          git config --local user.name "GitHub Actions"
-          git config --local user.email "actions@github.com"
-          git add release-info.json
-          git commit -m "Update release info for v${{ steps.get_version.outputs.VERSION }}"
-          git push
+          # Fill in real repository information
+          node -e "
+            const fs = require('fs');
+            const releaseInfo = JSON.parse(fs.readFileSync('release-info.json', 'utf8'));
+            
+            // Update plugin info
+            releaseInfo.name = process.env.PLUGIN_NAME;
+            releaseInfo.slug = process.env.PLUGIN_SLUG;
+            releaseInfo.requires = process.env.PLUGIN_REQUIRES;
+            releaseInfo.tested = process.env.PLUGIN_TESTED;
+            releaseInfo.requires_php = process.env.PLUGIN_REQUIRES_PHP;
+            releaseInfo.homepage = 'https://github.com/${{ github.repository }}';
+            
+            // Update current version
+            releaseInfo.current_version = '${{ steps.get_version.outputs.VERSION }}';
+            releaseInfo.last_updated = new Date().toISOString().slice(0, 19).replace('T', ' ');
+            
+            // Add new version
+            releaseInfo.versions['${{ steps.get_version.outputs.VERSION }}'] = {
+              version: '${{ steps.get_version.outputs.VERSION }}',
+              zip_url: 'https://github.com/${{ github.repository }}/releases/download/v${{ steps.get_version.outputs.VERSION }}/wp-image-optimizer.zip',
+              requires: process.env.PLUGIN_REQUIRES,
+              tested: process.env.PLUGIN_TESTED,
+              requires_php: process.env.PLUGIN_REQUIRES_PHP,
+              release_date: new Date().toISOString().slice(0, 10)
+            };
+            
+            // Update changelog
+            const changelog = '<h4>${{ steps.get_version.outputs.VERSION }} - ' + new Date().toLocaleString('en-us', { month: 'long', year: 'numeric' }) + '</h4>\\n<ul>\\n<li>New version release</li>\\n</ul>';
+            releaseInfo.sections.changelog = changelog + releaseInfo.sections.changelog;
+            
+            fs.writeFileSync('release-info.json', JSON.stringify(releaseInfo, null, 2));
+          "
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
@@ -81,6 +98,18 @@ jobs:
           files: build/wp-image-optimizer.zip
           name: Release ${{ steps.get_version.outputs.VERSION }}
           body: |
-            ## WebP & AVIF Image Optimizer ${{ steps.get_version.outputs.VERSION }}
+            ## ${{ vars.PLUGIN_NAME || 'WebP & AVIF Image Optimizer' }} ${{ steps.get_version.outputs.VERSION }}
             
             See [CHANGELOG.md](CHANGELOG.md) for details.
+
+      - name: Deploy release info to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: .
+          target-folder: .
+          clean: false
+          git-config-name: GitHub Actions
+          git-config-email: actions@github.com
+          commit-message: "Update release info for v${{ steps.get_version.outputs.VERSION }}"
+          files: |
+            release-info.json

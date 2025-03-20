@@ -1,0 +1,32 @@
+{
+  "name": "wp-image-optimizer",
+  "version": "1.0.0",
+  "description": "WordPress WebP & AVIF Image Optimizer",
+  "private": true,
+  "scripts": {
+    "prepare": "husky",
+    "lint:php": "composer lint",
+    "lint:php:strict": "composer check-strict",
+    "fix:php": "composer fix",
+    "build": "composer install --no-dev --optimize-autoloader && node scripts/build.js"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^18.4.3",
+    "@commitlint/config-conventional": "^18.4.3",
+    "archiver": "^6.0.1",
+    "chalk": "^5.3.0",
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.2"
+  },
+  "lint-staged": {
+    "*.php": [
+      "composer lint"
+    ],
+    "*.js": [
+      "eslint --cache --fix"
+    ],
+    "*.{css,scss}": [
+      "stylelint --fix"
+    ]
+  }
+}

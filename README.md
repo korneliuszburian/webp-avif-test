@@ -1,143 +1,145 @@
-# WordPress WebP & AVIF Image Optimizer
+# WebP & AVIF Image Optimizer for WordPress
 
-A high-performance WordPress plugin for converting and optimizing your images to WebP and AVIF formats.
+![Version](https://img.shields.io/github/v/release/korneliuszburian/webp-avif-test?sort=semver&style=flat-square)
+![PHP Version](https://img.shields.io/badge/php-%3E%3D8.1-blue?style=flat-square)
+![WordPress Version](https://img.shields.io/badge/wordpress-%3E%3D5.8-blue?style=flat-square)
+![License](https://img.shields.io/github/license/korneliuszburian/webp-avif-test?style=flat-square)
 
-## Features
+A high-performance WordPress plugin for automatically converting and optimizing your images to WebP and AVIF formats, delivering smaller file sizes and faster loading times without sacrificing quality.
+
+## 🌟 Features
 
 - **Automatic Conversion**: Automatically convert uploaded images to WebP and AVIF formats
-- **Manual Conversion**: Manually convert individual images from the media library
-- **Bulk Conversion**: Convert your entire media library in the background
-- **Format Detection**: Serve the appropriate format based on browser support
-- **Performance Optimization**: High-performance image processing with minimal server impact
-- **Detailed Statistics**: Track space savings and conversion rates
-- **Flexible Settings**: Customize quality, conversion methods, and more
+- **Manual Conversion**: Selectively convert individual images from the media library
+- **Bulk Processing**: Convert your entire media library in the background with progress tracking
+- **Smart Delivery**: Automatically serve the appropriate image format based on browser support
+- **Flexible Settings**: Customize quality, conversion methods, and performance parameters
+- **Lossless Support**: Option for lossless compression to maintain perfect quality
+- **Performance Optimized**: Batch processing with adjustable server load management
+- **Clean Architecture**: Built with modern PHP 8.1+ features and design patterns
 
-## Requirements
+## 📋 Requirements
 
-- WordPress 5.3+
+- WordPress 5.8+
 - PHP 8.1+
-- GD library with WebP/AVIF support, ImageMagick, or command-line tools
+- One of the following:
+  - PHP GD extension with WebP/AVIF support
+  - PHP Imagick extension with WebP/AVIF support
+  - Command-line tools: cwebp, avifenc (for best quality)
 
-## Installation
+## 🚀 Installation
 
-1. Upload the `wp-image-optimizer` folder to the `/wp-content/plugins/` directory
-2. Activate the plugin through the 'Plugins' menu in WordPress
-3. Go to 'Settings > WebP & AVIF' to configure the plugin
+### Automatic Updates
 
-## Development
+This plugin supports automatic updates directly through the WordPress admin panel.
 
-### Setup Development Environment
+### Manual Installation
 
-1. Clone this repository
-2. Install Composer dependencies: `composer install`
-3. Install Git hooks for code quality checks: `./bin/install-git-hooks.sh`
+1. Download the latest release from the [Releases page](https://github.com/korneliuszburian/webp-avif-test/releases)
+2. Upload the zip file via the WordPress admin (Plugins > Add New > Upload Plugin)
+3. Activate the plugin
+4. Go to Settings > WebP & AVIF to configure options
 
-### Code Quality & Security Checks
+## ⚙️ Configuration
 
-Different levels of code checking are available:
+### General Settings
 
-1. **Basic checks** (required before commits):
+- **Auto Convert**: Automatically convert images upon upload
+- **Enable WebP**: Generate WebP versions of images
+- **Enable AVIF**: Generate AVIF versions of images
+
+### Format-Specific Settings
+
+- **Quality**: Adjust the compression quality (1-100)
+- **Lossless**: Enable lossless compression (larger files but perfect quality)
+- **AVIF Speed**: Balance between encoding speed and compression efficiency
+
+### Performance Settings
+
+- **Batch Size**: Number of images to process in each batch during bulk conversion
+- **Processing Delay**: Time between batches to prevent server overload
+
+## 🔧 Usage
+
+### Converting Existing Images
+
+1. Go to Media Library
+2. For individual images:
+   - Click on an image
+   - Look for the "WebP & AVIF" section
+   - Click "Convert Now"
+3. For bulk conversion:
+   - Go to Settings > WebP & AVIF > Bulk Convert
+   - Click "Start Bulk Conversion"
+
+### Status Indicators
+
+In the Media Library, each image shows its conversion status:
+- 🟢 Green checkmark: Both WebP and AVIF versions available
+- 🟠 Orange checkmark: WebP version available
+- 🔵 Blue checkmark: AVIF version available
+- 🔴 Red X: No optimized versions available
+
+## 🛠 Development
+
+### Prerequisites
+
+- PHP 8.1+
+- Composer
+- Node.js and npm
+
+### Setup for Development
+
+1. Clone the repository
+   ```bash
+   git clone https://github.com/korneliuszburian/webp-avif-test.git
+   cd webp-avif-test
    ```
-   composer lint
+
+2. Install dependencies
+   ```bash
+   composer install
+   npm install
    ```
-   Ensures PHP code doesn't contain syntax errors.
 
-2. **Standard checks** (recommended during development):
+3. Setup Git hooks
+   ```bash
+   npm run prepare
    ```
-   composer check
-   ```
-   Runs syntax checks, security checks and static analysis with relaxed rules.
-   
-3. **Strict checks** (same rules as CI):
-   ```
-   composer check-strict
-   ```
-   Runs all checks including strict coding standards.
 
-### Fixing Code Style Issues
+### Development Commands
 
-Fix automatically fixable coding standards issues with:
+- **Lint PHP code**: `composer lint`
+- **Fix PHP code style**: `composer fix`
+- **Full code checks**: `composer check-strict`
+- **Build plugin package**: `npm run build`
 
-```
-composer fix
-```
+### Architecture
 
-Or use the comprehensive fixing script:
+The plugin follows the principles of clean architecture and dependency injection:
 
-```
-./bin/fix-code-style.sh
-```
+- **Core**: Base plugin functionality and container
+- **Domain**: Business logic and interfaces
+- **Admin**: WordPress admin UI integration
+- **Media**: Media library integration and processing
+- **Conversion**: Image conversion implementations
+- **Utility**: Helper classes and services
 
-### Pre-commit Hooks
+## 🔄 Contributing
 
-The pre-commit hook verifies PHP syntax and shows warnings for style issues but doesn't block commits. Install it with:
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-```
-./bin/install-git-hooks.sh
-```
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## Usage
+## 📝 License
 
-### Automatic Conversion
+This project is licensed under the GPL v2 or later - see the [LICENSE](LICENSE) file for details.
 
-By default, the plugin will automatically convert newly uploaded JPEG and PNG images to WebP and AVIF formats. You can disable this in the settings.
+## ⭐ Credits
 
-### Manual Conversion
-
-You can manually convert images from the media library by:
-
-1. Clicking on an image in the media library
-2. Clicking the "Convert Now" button in the WebP & AVIF section
-
-### Bulk Conversion
-
-To convert all your existing images:
-
-1. Go to 'Settings > WebP & AVIF > Bulk Convert'
-2. Click the "Start Bulk Conversion" button
-3. Wait for the conversion to complete
-
-### Format Detection
-
-The plugin automatically detects browser support and serves the appropriate format (WebP, AVIF, or the original image).
-
-## Advanced Configuration
-
-### Quality Settings
-
-You can adjust the quality of WebP and AVIF images in the settings. Higher values result in better image quality but larger file sizes.
-
-### Conversion Methods
-
-The plugin supports multiple conversion methods:
-
-- **GD Library**: Fast, built-in PHP image processing
-- **ImageMagick**: More advanced image processing
-- **Command Line Tools**: Highest quality but requires server access
-
-### Performance Tuning
-
-You can adjust batch size and processing delay to balance conversion speed with server load.
-
-## Troubleshooting
-
-### Images Not Converting
-
-- Make sure your server has the necessary libraries (GD with WebP/AVIF support or ImageMagick)
-- Check that the images are in a supported format (JPEG or PNG)
-- Verify that you have write permissions for the upload directory
-
-### High Server Load
-
-- Reduce the batch size in the performance settings
-- Increase the processing delay between batches
-- Consider converting images manually or during off-peak hours
-
-## License
-
-This plugin is licensed under the GPL v2 or later.
-
-## Credits
-
-- Developed by Your Name
-- Uses the WebP and AVIF libraries
+- WebP technology by Google
+- AVIF technology by the Alliance for Open Media
