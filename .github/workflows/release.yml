@@ -88,6 +88,8 @@ jobs:
             
             // Update current version
             releaseInfo.current_version = '${{ steps.get_version.outputs.VERSION }}';
+            releaseInfo.version = '${{ steps.get_version.outputs.VERSION }}';
+            releaseInfo.download_url = 'https://github.com/${{ github.repository }}/releases/download/v${{ steps.get_version.outputs.VERSION }}/wp-image-optimizer.zip';
             releaseInfo.last_updated = new Date().toISOString().slice(0, 19).replace('T', ' ');
             
             // Add new version
