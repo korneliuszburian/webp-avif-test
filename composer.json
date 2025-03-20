@@ -1,0 +1,27 @@
+{
+    "name": "your-vendor/wp-image-optimizer",
+    "description": "High-performance WebP and AVIF conversion for WordPress images",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "require": {
+        "php": ">=8.1"
+    },
+    "require-dev": {
+        "squizlabs/php_codesniffer": "^3.7",
+        "wp-coding-standards/wpcs": "^2.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "WpImageOptimizer\\": "src/"
+        }
+    },
+    "scripts": {
+        "phpcs": "phpcs --standard=WordPress",
+        "phpcbf": "phpcbf --standard=WordPress"
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    }
+}

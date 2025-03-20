@@ -30,6 +30,29 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
     \WpImageOptimizer\Autoloader::register();
 }
 
+// Define version based on git tag if possible
+if (!defined('WP_IMAGE_OPTIMIZER_VERSION')) {
+    // Use git to determine version if this is a development setup
+    if (is_dir(__DIR__ . '/.git') && function_exists('exec')) {
+        $git_tag = null;
+        // Try to get the latest tag
+        exec('git describe --tags --abbrev=0 2>&1', $output, $return_var);
+        if ($return_var === 0 && !empty($output[0])) {
+            $git_tag = trim($output[0]);
+            // Remove 'v' prefix if present
+            if (substr($git_tag, 0, 1) === 'v') {
+                $git_tag = substr($git_tag, 1);
+            }
+        }
+        
+        // Use tag version, or default to 1.0.0
+        define('WP_IMAGE_OPTIMIZER_VERSION', $git_tag ?: '1.0.0');
+    } else {
+        // Default version if not a git repository
+        define('WP_IMAGE_OPTIMIZER_VERSION', '1.0.0');
+    }
+}
+
 // Boot the plugin
 (function() {
     // Create the service container

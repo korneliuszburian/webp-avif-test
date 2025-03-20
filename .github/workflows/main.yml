@@ -29,16 +29,26 @@ jobs:
           tools: composer:v2
           coverage: none
         
-      - name: Install Composer dependencies
+      - name: Check for composer.json
+        id: check_composer
         run: |
-          composer install --no-progress --no-suggest --prefer-dist --optimize-autoloader
+          if [ -f "composer.json" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install Composer dependencies
+        if: steps.check_composer.outputs.exists == 'true'
+        run: |
+          composer install --no-progress --prefer-dist --optimize-autoloader
 
       - name: PHP Syntax Check
         run: |
           find . -type f -name "*.php" -not -path "./vendor/*" -print0 | xargs -0 -n1 php -l
 
       - name: PHP CodeSniffer
-        if: ${{ matrix.php-versions == '8.1' && matrix.wordpress-versions == 'latest' }}
+        if: ${{ matrix.php-versions == '8.1' && matrix.wordpress-versions == 'latest' && steps.check_composer.outputs.exists == 'true' }}
         run: |
           composer require --dev squizlabs/php_codesniffer wp-coding-standards/wpcs
           vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/*,*/node_modules/* .
@@ -65,9 +75,19 @@ jobs:
           tools: composer:v2
           coverage: none
 
-      - name: Install Composer dependencies
+      - name: Check for composer.json
+        id: check_composer_build
         run: |
-          composer install --no-dev --no-progress --no-suggest --prefer-dist --optimize-autoloader
+          if [ -f "composer.json" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install Composer dependencies
+        if: steps.check_composer_build.outputs.exists == 'true'
+        run: |
+          composer install --no-dev --no-progress --prefer-dist --optimize-autoloader
 
       - name: Create build directory
         run: |
