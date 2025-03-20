@@ -1,0 +1,121 @@
+name: Build & Deploy WordPress Plugin
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*.*.*'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    name: Validate & Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php-versions: ['8.1', '8.2', '8.3']
+        wordpress-versions: ['6.0', '6.1', '6.2', 'latest']
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-versions }}
+          extensions: gd, imagick, mbstring
+          tools: composer:v2
+          coverage: none
+        
+      - name: Install Composer dependencies
+        run: |
+          composer install --no-progress --no-suggest --prefer-dist --optimize-autoloader
+
+      - name: PHP Syntax Check
+        run: |
+          find . -type f -name "*.php" -not -path "./vendor/*" -print0 | xargs -0 -n1 php -l
+
+      - name: PHP CodeSniffer
+        if: ${{ matrix.php-versions == '8.1' && matrix.wordpress-versions == 'latest' }}
+        run: |
+          composer require --dev squizlabs/php_codesniffer wp-coding-standards/wpcs
+          vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/*,*/node_modules/* .
+
+  build:
+    name: Build Plugin Package
+    needs: validate
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Get the version
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: gd, imagick, mbstring
+          tools: composer:v2
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: |
+          composer install --no-dev --no-progress --no-suggest --prefer-dist --optimize-autoloader
+
+      - name: Create build directory
+        run: |
+          mkdir -p build/wp-image-optimizer
+
+      - name: Copy files to build directory
+        run: |
+          rsync -av --exclude-from='.distignore' --exclude='.git/' --exclude='.github/' --exclude='build/' --exclude='node_modules/' . build/wp-image-optimizer/
+
+      - name: Create plugin zip
+        run: |
+          cd build
+          zip -r wp-image-optimizer-${{ steps.get_version.outputs.VERSION }}.zip wp-image-optimizer
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ steps.get_version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./build/wp-image-optimizer-${{ steps.get_version.outputs.VERSION }}.zip
+          asset_name: wp-image-optimizer-${{ steps.get_version.outputs.VERSION }}.zip
+          asset_content_type: application/zip
+
+  deploy-wp-org:
+    name: Deploy to WordPress.org
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: WordPress Plugin Deploy
+        uses: 10up/action-wordpress-plugin-deploy@stable
+        env:
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SLUG: wp-image-optimizer
