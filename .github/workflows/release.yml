@@ -154,3 +154,10 @@ jobs:
           commit-message: "Update release info for v${{ steps.get_version.outputs.VERSION }}"
           files: |
             release-info.json
+
+      - name: Completion Message
+        run: |
+          echo "Release v${{ steps.get_version.outputs.VERSION }} has been created!"
+          echo "IMPORTANT: GitHub Pages deployment may still be in progress."
+          echo "Your release-info.json will be available at:"
+          echo "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/release-info.json"
