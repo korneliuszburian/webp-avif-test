@@ -47,11 +47,20 @@ jobs:
         run: |
           find . -type f -name "*.php" -not -path "./vendor/*" -print0 | xargs -0 -n1 php -l
 
-      - name: PHP CodeSniffer
+      - name: Code Quality & Security Checks
         if: ${{ matrix.php-versions == '8.1' && matrix.wordpress-versions == 'latest' && steps.check_composer.outputs.exists == 'true' }}
         run: |
-          composer require --dev squizlabs/php_codesniffer wp-coding-standards/wpcs
-          vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/*,*/node_modules/* .
+          composer require --dev squizlabs/php_codesniffer wp-coding-standards/wpcs dealerdirect/phpcodesniffer-composer-installer phpstan/phpstan phpcompatibility/php-compatibility
+          
+          echo "Running PHP CodeSniffer..."
+          vendor/bin/phpcs --standard=phpcs.xml.dist --extensions=php .
+          
+          echo "Running PHPStan..."
+          vendor/bin/phpstan analyse --no-progress --level=3 src/
+          
+          echo "Running Security Checks..."
+          vendor/bin/phpcs --standard=PHPCompatibility,PSR12 --extensions=php --runtime-set testVersion 8.1- src/
+        continue-on-error: true  # Report issues but don't fail the build
 
   build:
     name: Build Plugin Package

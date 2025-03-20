@@ -24,6 +24,58 @@ A high-performance WordPress plugin for converting and optimizing your images to
 2. Activate the plugin through the 'Plugins' menu in WordPress
 3. Go to 'Settings > WebP & AVIF' to configure the plugin
 
+## Development
+
+### Setup Development Environment
+
+1. Clone this repository
+2. Install Composer dependencies: `composer install`
+3. Install Git hooks for code quality checks: `./bin/install-git-hooks.sh`
+
+### Code Quality & Security Checks
+
+Different levels of code checking are available:
+
+1. **Basic checks** (required before commits):
+   ```
+   composer lint
+   ```
+   Ensures PHP code doesn't contain syntax errors.
+
+2. **Standard checks** (recommended during development):
+   ```
+   composer check
+   ```
+   Runs syntax checks, security checks and static analysis with relaxed rules.
+   
+3. **Strict checks** (same rules as CI):
+   ```
+   composer check-strict
+   ```
+   Runs all checks including strict coding standards.
+
+### Fixing Code Style Issues
+
+Fix automatically fixable coding standards issues with:
+
+```
+composer fix
+```
+
+Or use the comprehensive fixing script:
+
+```
+./bin/fix-code-style.sh
+```
+
+### Pre-commit Hooks
+
+The pre-commit hook verifies PHP syntax and shows warnings for style issues but doesn't block commits. Install it with:
+
+```
+./bin/install-git-hooks.sh
+```
+
 ## Usage
 
 ### Automatic Conversion
