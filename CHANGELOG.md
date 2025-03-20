@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.12] - 2025-03-20
+
+- Code Refactoring: ♻️ Update release script for clarity and improved changelog handling
+- Feature: ✨ Generate release-info.json from scratch with enhanced details
+- Feature: ✨ Generate release-info.json dynamically in workflow
+- Remove: 🚮 Remove obsolete configuration files and .htaccess.
+
+
 ## [1.0.11] - 2025-03-20
 
 - Feature: ✨ Add version and download URL to release info in workflow
