@@ -86,17 +86,17 @@ $container->set(
 	}
 );
 
-// Admin services
 $container->set(
-	'admin_page',
-	function ( $c ) {
-		return new \WpImageOptimizer\Admin\AdminPage(
-			$c->get( 'settings' ),
-			$c->get( 'stats' ),
-			$c->get( 'logger' ),
-			$c->get( 'progress_manager' )
-		);
-	}
+    'admin_page',
+    function ( $c ) {
+        return new \WpImageOptimizer\Admin\AdminPage(
+            $c, // pass the container here
+            $c->get( 'settings' ),
+            $c->get( 'stats' ),
+            $c->get( 'logger' ),
+            $c->get( 'progress_manager' )
+        );
+    }
 );
 
 $container->set(

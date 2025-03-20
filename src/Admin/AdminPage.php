@@ -2,19 +2,33 @@
 
 namespace WpImageOptimizer\Admin;
 
+use WpImageOptimizer\Core\Container;
 use WpImageOptimizer\Core\Settings;
 use WpImageOptimizer\Utility\Stats;
 use WpImageOptimizer\Utility\Logger;
 use WpImageOptimizer\Utility\ProgressManager;
 
 class AdminPage {
-	public function __construct(
-		private Settings $settings,
-		private Stats $stats,
-		private Logger $logger,
-		private ProgressManager $progressManager
-	) {}
+    private Container $container;
+    private Settings $settings;
+    private Stats $stats;
+    private Logger $logger;
+    private ProgressManager $progressManager;
 
+    public function __construct(
+        Container $container,
+        Settings $settings,
+        Stats $stats,
+        Logger $logger,
+        ProgressManager $progressManager
+    ) {
+        $this->container       = $container;
+        $this->settings        = $settings;
+        $this->stats           = $stats;
+        $this->logger          = $logger;
+        $this->progressManager = $progressManager;
+    }
+	
 	/**
 	 * Register hooks for admin page
 	 */
