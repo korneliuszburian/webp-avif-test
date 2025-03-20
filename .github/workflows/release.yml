@@ -73,41 +73,65 @@ jobs:
           PLUGIN_TESTED: ${{ vars.PLUGIN_TESTED || '6.7' }}
           PLUGIN_REQUIRES_PHP: ${{ vars.PLUGIN_REQUIRES_PHP || '8.1' }}
         run: |
-          # Fill in real repository information
-          node -e "
-            const fs = require('fs');
-            const releaseInfo = JSON.parse(fs.readFileSync('release-info.json', 'utf8'));
-            
-            // Update plugin info
-            releaseInfo.name = process.env.PLUGIN_NAME;
-            releaseInfo.slug = process.env.PLUGIN_SLUG;
-            releaseInfo.requires = process.env.PLUGIN_REQUIRES;
-            releaseInfo.tested = process.env.PLUGIN_TESTED;
-            releaseInfo.requires_php = process.env.PLUGIN_REQUIRES_PHP;
-            releaseInfo.homepage = 'https://github.com/${{ github.repository }}';
-            
-            // Update current version
-            releaseInfo.current_version = '${{ steps.get_version.outputs.VERSION }}';
-            releaseInfo.version = '${{ steps.get_version.outputs.VERSION }}';
-            releaseInfo.download_url = 'https://github.com/${{ github.repository }}/releases/download/v${{ steps.get_version.outputs.VERSION }}/wp-image-optimizer.zip';
-            releaseInfo.last_updated = new Date().toISOString().slice(0, 19).replace('T', ' ');
-            
-            // Add new version
-            releaseInfo.versions['${{ steps.get_version.outputs.VERSION }}'] = {
-              version: '${{ steps.get_version.outputs.VERSION }}',
-              zip_url: 'https://github.com/${{ github.repository }}/releases/download/v${{ steps.get_version.outputs.VERSION }}/wp-image-optimizer.zip',
-              requires: process.env.PLUGIN_REQUIRES,
-              tested: process.env.PLUGIN_TESTED,
-              requires_php: process.env.PLUGIN_REQUIRES_PHP,
-              release_date: new Date().toISOString().slice(0, 10)
-            };
-            
-            // Update changelog
-            const changelog = '<h4>${{ steps.get_version.outputs.VERSION }} - ' + new Date().toLocaleString('en-us', { month: 'long', year: 'numeric' }) + '</h4>\\n<ul>\\n<li>New version release</li>\\n</ul>';
-            releaseInfo.sections.changelog = changelog + releaseInfo.sections.changelog;
-            
-            fs.writeFileSync('release-info.json', JSON.stringify(releaseInfo, null, 2));
-          "
+          # Generate release-info.json from scratch instead of modifying existing
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+          REPO="${{ github.repository }}"
+          DATE=$(date +"%Y-%m-%d %H:%M:%S")
+          RELEASE_DATE=$(date +"%Y-%m-%d")
+          
+          # Extract changelog from CHANGELOG.md if it exists
+          CHANGELOG="<h4>$VERSION - $(date +'%B %Y')</h4>\n<ul>\n<li>New version release</li>\n</ul>"
+          if [ -f "CHANGELOG.md" ]; then
+            ENTRY=$(grep -A20 "## \[$VERSION\]" CHANGELOG.md | grep -v "^##" | grep -v "^$" | head -10)
+            if [ ! -z "$ENTRY" ]; then
+              CHANGELOG="<h4>$VERSION - $(date +'%B %Y')</h4>\n<ul>"
+              while IFS= read -r line; do
+                # Remove the leading dash and convert to list item
+                if [[ "$line" =~ ^-[[:space:]]+(.*) ]]; then
+                  ITEM="${BASH_REMATCH[1]}"
+                  CHANGELOG="$CHANGELOG\n<li>$ITEM</li>"
+                fi
+              done <<< "$ENTRY"
+              CHANGELOG="$CHANGELOG\n</ul>"
+            fi
+          fi
+
+          # Create the JSON content
+          cat > release-info.json << EOL
+{
+  "name": "$PLUGIN_NAME",
+  "slug": "$PLUGIN_SLUG",
+  "version": "$VERSION",
+  "download_url": "https://github.com/$REPO/releases/download/v$VERSION/wp-image-optimizer.zip",
+  "author": "<a href='https://github.com/korneliuszburian'>Korneliusz Burian</a>",
+  "author_profile": "https://github.com/korneliuszburian",
+  "requires": "$PLUGIN_REQUIRES",
+  "tested": "$PLUGIN_TESTED",
+  "requires_php": "$PLUGIN_REQUIRES_PHP",
+  "last_updated": "$DATE",
+  "homepage": "https://github.com/$REPO",
+  "sections": {
+    "description": "High-performance WebP and AVIF image conversion plugin for WordPress.",
+    "installation": "Upload the plugin to your WordPress site and activate it. Configure settings from the 'Settings > WebP & AVIF' menu.",
+    "changelog": "$CHANGELOG"
+  },
+  "icons": {
+    "1x": "https://raw.githubusercontent.com/$REPO/master/assets/icon-128x128.png",
+    "2x": "https://raw.githubusercontent.com/$REPO/master/assets/icon-256x256.png"
+  },
+  "versions": {
+    "$VERSION": {
+      "version": "$VERSION",
+      "zip_url": "https://github.com/$REPO/releases/download/v$VERSION/wp-image-optimizer.zip",
+      "requires": "$PLUGIN_REQUIRES",
+      "tested": "$PLUGIN_TESTED",
+      "requires_php": "$PLUGIN_REQUIRES_PHP",
+      "release_date": "$RELEASE_DATE"
+    }
+  },
+  "current_version": "$VERSION"
+}
+EOL
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
