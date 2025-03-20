@@ -81,7 +81,8 @@ $container->set(
 	function ( $c ) {
 		return new \WpImageOptimizer\Media\MediaLibraryIntegration(
 			$c->get( 'settings' ),
-			$c->get( 'media_processor' )
+			$c->get( 'media_processor' ),
+			$c->get( 'logger' )
 		);
 	}
 );

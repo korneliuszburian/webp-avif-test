@@ -3,17 +3,21 @@
 namespace WpImageOptimizer\Media;
 
 use WpImageOptimizer\Core\Settings;
+use WpImageOptimizer\Utility\Logger;
 
 class MediaLibraryIntegration {
 	public function __construct(
 		private Settings $settings,
-		private MediaProcessor $mediaProcessor
+		private MediaProcessor $mediaProcessor,
+		private Logger $logger
 	) {}
 
 	/**
 	 * Register hooks for media library integration
 	 */
 	public function registerHooks(): void {
+	    $this->logger->info("Registering media library integration hooks");
+	    
 		// Add convert button to media library
 		add_filter( 'attachment_fields_to_edit', array( $this, 'addConvertButtons' ), 10, 2 );
 
@@ -30,6 +34,32 @@ class MediaLibraryIntegration {
 
 		// Add admin notices
 		add_action( 'admin_notices', array( $this, 'showAdminNotices' ) );
+		
+		// Add action for attachment details in grid
+		add_action('wp_prepare_attachment_for_js', array($this, 'addConversionFieldsToJs'), 10, 3);
+	}
+	
+	/**
+	 * Add conversion details to attachment JS object
+	 */
+	public function addConversionFieldsToJs($response, $attachment, $meta) {
+	    if ($this->isSupportedImageType($response['mime'])) {
+	        $hasWebp = !empty($meta['webp_path']) && file_exists($meta['webp_path']);
+	        $hasAvif = !empty($meta['avif_path']) && file_exists($meta['avif_path']);
+	        
+	        $response['wp_image_optimizer'] = [
+	            'supported' => true,
+	            'webp' => $hasWebp,
+	            'avif' => $hasAvif,
+	            'html' => $this->getConversionButtonsHtml($attachment->ID, $hasWebp, $hasAvif)
+	        ];
+	    } else {
+	        $response['wp_image_optimizer'] = [
+	            'supported' => false
+	        ];
+	    }
+	    
+	    return $response;
 	}
 
 	/**
@@ -38,12 +68,16 @@ class MediaLibraryIntegration {
 	public function addConvertButtons( array $form_fields, object $post ): array {
 		// Only show for supported image types
 		if ( ! $this->isSupportedImageType( $post->post_mime_type ) ) {
+		    $this->logger->info("Skipping convert button for unsupported type: " . $post->post_mime_type);
 			return $form_fields;
 		}
 
+        $this->logger->info("Adding convert button for attachment: " . $post->ID);
 		$meta    = wp_get_attachment_metadata( $post->ID );
 		$hasWebp = ! empty( $meta['webp_path'] ) && file_exists( $meta['webp_path'] );
 		$hasAvif = ! empty( $meta['avif_path'] ) && file_exists( $meta['avif_path'] );
+		
+		$this->logger->info("Status - WebP: " . ($hasWebp ? 'Yes' : 'No') . ", AVIF: " . ($hasAvif ? 'Yes' : 'No'));
 
 		// Add convert button
 		$form_fields['wp_image_optimizer'] = array(
@@ -82,16 +116,26 @@ class MediaLibraryIntegration {
 		$meta    = wp_get_attachment_metadata( $post_id );
 		$hasWebp = ! empty( $meta['webp_path'] ) && file_exists( $meta['webp_path'] );
 		$hasAvif = ! empty( $meta['avif_path'] ) && file_exists( $meta['avif_path'] );
+		
+		$html = '';
 
 		if ( $hasWebp && $hasAvif ) {
-			echo '<span class="dashicons dashicons-yes-alt" style="color:green;" title="' . esc_attr__( 'Both WebP and AVIF versions available', 'wp-image-optimizer' ) . '"></span>';
+			$html = '<span class="dashicons dashicons-yes-alt" style="color:green;" title="' . esc_attr__( 'Both WebP and AVIF versions available', 'wp-image-optimizer' ) . '"></span>';
 		} elseif ( $hasWebp ) {
-			echo '<span class="dashicons dashicons-yes" style="color:orange;" title="' . esc_attr__( 'WebP version available', 'wp-image-optimizer' ) . '"></span>';
+			$html = '<span class="dashicons dashicons-yes" style="color:orange;" title="' . esc_attr__( 'WebP version available', 'wp-image-optimizer' ) . '"></span>';
 		} elseif ( $hasAvif ) {
-			echo '<span class="dashicons dashicons-yes" style="color:blue;" title="' . esc_attr__( 'AVIF version available', 'wp-image-optimizer' ) . '"></span>';
+			$html = '<span class="dashicons dashicons-yes" style="color:blue;" title="' . esc_attr__( 'AVIF version available', 'wp-image-optimizer' ) . '"></span>';
 		} else {
-			echo '<span class="dashicons dashicons-no" style="color:red;" title="' . esc_attr__( 'No optimized versions available', 'wp-image-optimizer' ) . '"></span>';
+			$html = '<span class="dashicons dashicons-no" style="color:red;" title="' . esc_attr__( 'No optimized versions available', 'wp-image-optimizer' ) . '"></span>';
 		}
+		
+		// Add convert button in the grid view
+		$html .= ' <button type="button" class="button wp-image-optimizer-convert" data-id="' . esc_attr($post_id) . '">';
+        $html .= '<span class="spinner" style="float:none;margin-top:0;margin-right:4px;"></span>';
+        $html .= __('Convert', 'wp-image-optimizer');
+        $html .= '</button>';
+        
+        echo $html;
 	}
 
 	/**
@@ -178,7 +222,10 @@ class MediaLibraryIntegration {
 		}
 
 		// Start bulk conversion in the background
-		$this->mediaProcessor->bulkConvertImages( $supported_ids );
+		if (!empty($supported_ids)) {
+		    $processId = 'bulk_convert_' . uniqid();
+		    $this->mediaProcessor->bulkConvertImages($supported_ids, $processId);
+		}
 
 		// Add query args for admin notice
 		$redirect_to = add_query_arg(
@@ -245,7 +292,7 @@ class MediaLibraryIntegration {
 
 		// Convert button
 		$html .= '<button type="button" class="button wp-image-optimizer-convert" data-id="' . esc_attr( $attachment_id ) . '">';
-		$html .= '<span class="spinner" style="float:none;margin-top:0;"></span> ';
+		$html .= '<span class="spinner" style="float:none;margin-top:0;margin-right:4px;"></span> ';
 		$html .= __( 'Convert Now', 'wp-image-optimizer' );
 		$html .= '</button>';
 

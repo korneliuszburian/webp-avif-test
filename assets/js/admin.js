@@ -29,6 +29,7 @@
                     nonce: wpImageOptimizer.nonce
                 },
                 success: function(response) {
+                    console.log('Bulk conversion started:', response);
                     if (response.success) {
                         processId = response.data.process_id;
                         total = response.data.total;
@@ -39,8 +40,9 @@
                         handleError(response.data.message);
                     }
                 },
-                error: function() {
-                    handleError('Ajax request failed');
+                error: function(xhr, status, error) {
+                    console.error('Ajax error:', xhr, status, error);
+                    handleError('Ajax request failed: ' + error);
                 }
             });
         });
@@ -55,6 +57,7 @@
                     process_id: processId
                 },
                 success: function(response) {
+                    console.log('Progress update:', response);
                     if (response.success) {
                         updateProgress(response.data);
                         
@@ -69,11 +72,13 @@
                             }, 2000);
                         }
                     } else {
-                        handleError(response.data.message);
+                        console.error('Progress check failed:', response);
+                        // Don't stop on a single error, try again next interval
                     }
                 },
-                error: function() {
-                    handleError('Ajax request failed');
+                error: function(xhr, status, error) {
+                    console.error('Progress check error:', xhr, status, error);
+                    // Don't stop on a single error, try again next interval
                 }
             });
         }
@@ -90,16 +95,28 @@
         function handleError(message) {
             clearInterval(intervalId);
             $button.prop('disabled', false).text('Retry Conversion');
+            console.error('Error:', message);
             alert('Error: ' + message);
         }
     }
     
     // Media library conversion button
     function initMediaLibraryButtons() {
-        $(document).on('click', '.wp-image-optimizer-convert', function() {
+        console.log('Initializing media library buttons');
+        $(document).on('click', '.wp-image-optimizer-convert', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
             const $button = $(this);
             const attachmentId = $button.data('id');
             const $spinner = $button.find('.spinner');
+            
+            console.log('Convert button clicked for attachment ID:', attachmentId);
+            
+            if (!attachmentId) {
+                console.error('No attachment ID found');
+                return;
+            }
             
             $button.prop('disabled', true);
             $spinner.addClass('is-active');
@@ -113,10 +130,11 @@
                     attachment_id: attachmentId
                 },
                 success: function(response) {
+                    console.log('Conversion response:', response);
                     $spinner.removeClass('is-active');
                     
                     if (response.success) {
-                        $button.text(wpImageOptimizer.i18n.converted);
+                        $button.text(wpImageOptimizer.i18n.converted || 'Converted');
                         
                         // Update status indicators
                         const $webpStatus = $button.closest('.wp-image-optimizer-buttons').find('.wp-image-optimizer-webp .dashicons');
@@ -130,26 +148,32 @@
                             $avifStatus.removeClass('dashicons-no').addClass('dashicons-yes').css('color', 'green');
                         }
                     } else {
-                        $button.text(wpImageOptimizer.i18n.error);
+                        $button.text(wpImageOptimizer.i18n.error || 'Error');
                         setTimeout(function() {
-                            $button.prop('disabled', false).text(wpImageOptimizer.i18n.convert);
+                            $button.prop('disabled', false).text(wpImageOptimizer.i18n.convert || 'Convert Now');
                         }, 2000);
                     }
                 },
-                error: function() {
+                error: function(xhr, status, error) {
+                    console.error('Ajax error:', xhr, status, error);
                     $spinner.removeClass('is-active');
-                    $button.text(wpImageOptimizer.i18n.error);
+                    $button.text(wpImageOptimizer.i18n.error || 'Error');
                     setTimeout(function() {
-                        $button.prop('disabled', false).text(wpImageOptimizer.i18n.convert);
+                        $button.prop('disabled', false).text(wpImageOptimizer.i18n.convert || 'Convert Now');
                     }, 2000);
                 }
             });
+            
+            return false;
         });
     }
     
     // Initialize on document ready
     $(function() {
+        console.log('WP Image Optimizer script loaded');
+        
         if ($('.wp-image-optimizer-bulk').length) {
+            console.log('Initializing bulk conversion');
             initBulkConversion();
         }
         

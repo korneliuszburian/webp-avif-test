@@ -7,6 +7,7 @@ use WpImageOptimizer\Core\Settings;
 use WpImageOptimizer\Utility\Stats;
 use WpImageOptimizer\Utility\Logger;
 use WpImageOptimizer\Utility\ProgressManager;
+use WpImageOptimizer\Media\MediaProcessor;
 
 class AdminPage {
     private Container $container;
@@ -259,38 +260,44 @@ class AdminPage {
 	 * Enqueue admin assets
 	 */
 	public function enqueueAssets( string $hook ): void {
-		if ( $hook !== 'settings_page_wp-image-optimizer' ) {
-			return;
+	    // For media screens (grid and edit views) and plugin settings page
+	    $media_screens = array('upload.php', 'post.php', 'post-new.php', 'media-new.php');
+	    $is_media_or_settings = in_array($hook, $media_screens) || $hook === 'settings_page_wp-image-optimizer';
+		
+		// Only if we're on a media screen or the plugin settings page
+		if ($is_media_or_settings) {
+		    $this->logger->info("Enqueuing assets on screen: $hook");
+		    
+    		wp_enqueue_style(
+    			'wp-image-optimizer-admin',
+    			WP_IMAGE_OPTIMIZER_URL . 'assets/css/admin.css',
+    			array(),
+    			WP_IMAGE_OPTIMIZER_VERSION
+    		);
+    
+    		wp_enqueue_script(
+    			'wp-image-optimizer-admin',
+    			WP_IMAGE_OPTIMIZER_URL . 'assets/js/admin.js',
+    			array( 'jquery' ),
+    			WP_IMAGE_OPTIMIZER_VERSION,
+    			true
+    		);
+    
+    		wp_localize_script(
+    			'wp-image-optimizer-admin',
+    			'wpImageOptimizer',
+    			array(
+    				'ajax_url' => admin_url( 'admin-ajax.php' ),
+    				'nonce'    => wp_create_nonce( 'wp-image-optimizer' ),
+    				'i18n'     => array(
+    					'converting' => __( 'Converting...', 'wp-image-optimizer' ),
+    					'converted'  => __( 'Converted', 'wp-image-optimizer' ),
+    					'error'      => __( 'Error', 'wp-image-optimizer' ),
+                        'convert'    => __( 'Convert Now', 'wp-image-optimizer' ),
+    				),
+    			)
+    		);
 		}
-
-		wp_enqueue_style(
-			'wp-image-optimizer-admin',
-			WP_IMAGE_OPTIMIZER_URL . 'assets/css/admin.css',
-			array(),
-			WP_IMAGE_OPTIMIZER_VERSION
-		);
-
-		wp_enqueue_script(
-			'wp-image-optimizer-admin',
-			WP_IMAGE_OPTIMIZER_URL . 'assets/js/admin.js',
-			array( 'jquery' ),
-			WP_IMAGE_OPTIMIZER_VERSION,
-			true
-		);
-
-		wp_localize_script(
-			'wp-image-optimizer-admin',
-			'wpImageOptimizer',
-			array(
-				'ajax_url' => admin_url( 'admin-ajax.php' ),
-				'nonce'    => wp_create_nonce( 'wp-image-optimizer' ),
-				'i18n'     => array(
-					'converting' => __( 'Converting...', 'wp-image-optimizer' ),
-					'converted'  => __( 'Converted', 'wp-image-optimizer' ),
-					'error'      => __( 'Error', 'wp-image-optimizer' ),
-				),
-			)
-		);
 	}
 
 	/**
@@ -527,6 +534,8 @@ class AdminPage {
 	 * Ajax handlers
 	 */
 	public function ajaxGetProgress(): void {
+	    $this->logger->info('AJAX get_progress called');
+	    
 		check_ajax_referer( 'wp-image-optimizer', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -535,18 +544,24 @@ class AdminPage {
 
 		$process_id = $_POST['process_id'] ?? '';
 		if ( ! $process_id ) {
+		    $this->logger->error('Missing process ID in AJAX request');
 			wp_send_json_error( array( 'message' => 'Missing process ID' ) );
 		}
 
 		$progress = $this->progressManager->getProgress( $process_id );
 		if ( ! $progress ) {
+		    $this->logger->error("Process not found: $process_id");
 			wp_send_json_error( array( 'message' => 'Process not found' ) );
 		}
+		
+		$this->logger->info("Returning progress for $process_id: " . print_r($progress, true));
 
 		wp_send_json_success( $progress );
 	}
 
 	public function ajaxConvertSingle(): void {
+	    $this->logger->info('AJAX convert_single called');
+	    
 		check_ajax_referer( 'wp-image-optimizer', 'nonce' );
 
 		if ( ! current_user_can( 'upload_files' ) ) {
@@ -555,18 +570,24 @@ class AdminPage {
 
 		$attachment_id = (int) ( $_POST['attachment_id'] ?? 0 );
 		if ( ! $attachment_id ) {
+		    $this->logger->error('Missing attachment ID in AJAX request');
 			wp_send_json_error( array( 'message' => 'Missing attachment ID' ) );
 		}
 
-		$mediaProcessor = new \WpImageOptimizer\Media\MediaProcessor(
-			$this->container->get( 'webp_converter' ),
-			$this->container->get( 'avif_converter' ),
-			$this->settings,
-			$this->progressManager,
-			$this->logger
-		);
-
+		// Log the conversion request
+		$this->logger->info( "Single conversion requested for attachment ID: $attachment_id" );
+		
+		// Get the MediaProcessor instance from container
+		$mediaProcessor = $this->container->get('media_processor');
+		
 		$result = $mediaProcessor->convertSingleImage( $attachment_id );
+		
+		// Log the result
+        $this->logger->info( "Conversion result for attachment ID: $attachment_id", [
+            'success' => $result['success'],
+            'webp' => $result['webp'],
+            'avif' => $result['avif']
+        ]);
 
 		if ( $result['success'] ) {
 			wp_send_json_success(
@@ -582,9 +603,12 @@ class AdminPage {
 	}
 
 	public function ajaxBulkConvert(): void {
+	    $this->logger->info('AJAX bulk_convert called');
+	    
 		check_ajax_referer( 'wp-image-optimizer', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
+		    $this->logger->error('Insufficient permissions for bulk conversion');
 			wp_send_json_error( array( 'message' => 'Insufficient permissions' ) );
 		}
 
@@ -606,25 +630,41 @@ class AdminPage {
 
 		// Generate a unique process ID
 		$process_id = 'bulk_convert_' . uniqid();
+		
+		// Log the bulk conversion request
+		$this->logger->info( "Bulk conversion requested with process ID: $process_id", [
+		    'total_images' => count($ids)
+		]);
 
-		// Start a background process
-		$mediaProcessor = new \WpImageOptimizer\Media\MediaProcessor(
-			$this->container->get( 'webp_converter' ),
-			$this->container->get( 'avif_converter' ),
-			$this->settings,
-			$this->progressManager,
-			$this->logger
-		);
-
-		// Start the process
-		$mediaProcessor->bulkConvertImages( $ids );
-
-		wp_send_json_success(
-			array(
-				'message'    => __( 'Bulk conversion started', 'wp-image-optimizer' ),
-				'process_id' => $process_id,
-				'total'      => count( $ids ),
-			)
-		);
+		// Start progress tracking
+        $this->progressManager->startProcess($process_id, count($ids));
+        
+        // Get the MediaProcessor from container
+		$mediaProcessor = $this->container->get('media_processor');
+		
+		// Run in non-blocking way
+		if (count($ids) > 0) {
+    		// Start the conversion in a non-blocking way
+    		$this->scheduleBulkConversion($mediaProcessor, $process_id, $ids);
+    		
+    		$this->logger->info("Bulk conversion started for process ID: $process_id");
+    		
+    		wp_send_json_success([
+    			'message'    => __( 'Bulk conversion started', 'wp-image-optimizer' ),
+    			'process_id' => $process_id,
+    			'total'      => count( $ids ),
+    		]);
+		} else {
+		    $this->logger->warning("No images found for bulk conversion");
+		    wp_send_json_error(['message' => __('No images found to convert', 'wp-image-optimizer')]);
+		}
+	}
+	
+	/**
+	 * Schedule bulk conversion to run immediately with a given process ID
+	 */
+	private function scheduleBulkConversion($mediaProcessor, string $process_id, array $ids): void {
+	    // Process the images in batches
+        $mediaProcessor->bulkConvertImages($ids, $process_id);
 	}
 }

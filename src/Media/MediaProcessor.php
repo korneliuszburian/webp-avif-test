@@ -30,8 +30,11 @@ class MediaProcessor {
 			return $upload;
 		}
 
+        $this->logger->info("Processing uploaded media: " . $upload['file']);
+
 		$attachmentId = $this->getAttachmentIdByUrl( $upload['url'] );
 		if ( ! $attachmentId ) {
+			$this->logger->error("Could not find attachment ID for URL: " . $upload['url']);
 			return $upload;
 		}
 
@@ -60,15 +63,20 @@ class MediaProcessor {
 
 		$file = get_attached_file( $attachmentId );
 		if ( ! $file || ! $this->isSupportedImage( $file ) ) {
+			$this->logger->error("Invalid file for attachment ID $attachmentId: " . ($file ?: 'null'));
 			return $result;
 		}
 
+        $this->logger->info("Converting single image: $attachmentId - $file");
+
 		if ( $this->settings->get( 'enable_webp', true ) && $this->webpConverter->isSupported() ) {
 			$result['webp'] = $this->convertToFormat( $attachmentId, 'webp' );
+			$this->logger->info("WebP conversion result: " . ($result['webp'] ? 'success' : 'failed'));
 		}
 
 		if ( $this->settings->get( 'enable_avif', true ) && $this->avifConverter->isSupported() ) {
 			$result['avif'] = $this->convertToFormat( $attachmentId, 'avif' );
+			$this->logger->info("AVIF conversion result: " . ($result['avif'] ? 'success' : 'failed'));
 		}
 
 		$result['success'] = $result['webp'] || $result['avif'];
@@ -78,10 +86,15 @@ class MediaProcessor {
 
 	/**
 	 * Bulk convert multiple images
+	 * 
+	 * @param array $ids Array of attachment IDs to convert
+	 * @param string|null $processId Optional process ID for tracking
 	 */
-	public function bulkConvertImages( array $ids ): void {
+	public function bulkConvertImages( array $ids, string $processId = null ): void {
 		$totalImages = count( $ids );
-		$processId   = 'bulk_convert_' . uniqid();
+		if ($processId === null) {
+		    $processId = 'bulk_convert_' . uniqid();
+		}
 
 		// Initialize progress tracking
 		$this->progressManager->startProcess( $processId, $totalImages );
@@ -106,6 +119,7 @@ class MediaProcessor {
 						'success'       => $result['success'],
 						'webp'          => $result['webp'],
 						'avif'          => $result['avif'],
+						'process_id'    => $processId,
 					)
 				);
 			}
@@ -126,20 +140,31 @@ class MediaProcessor {
 	private function convertToFormat( int $attachmentId, string $format ): bool {
 		$file = get_attached_file( $attachmentId );
 		if ( ! $file ) {
+			$this->logger->error("Cannot get attached file for attachment ID: $attachmentId");
 			return false;
 		}
 
 		$destPath  = $this->getDestinationPath( $file, $format );
 		$converter = $format === 'webp' ? $this->webpConverter : $this->avifConverter;
 
+		$this->logger->info("Converting $file to $format at $destPath");
 		$success = $converter->convert( $file, $destPath, array() );
 
 		if ( $success ) {
 			// Update attachment metadata
-			$meta                     = wp_get_attachment_metadata( $attachmentId );
+			$meta = wp_get_attachment_metadata( $attachmentId );
+			if (!is_array($meta)) {
+			    $meta = array();
+			    $this->logger->warning("No metadata found for attachment ID: $attachmentId, creating new metadata");
+			}
+			
 			$meta[ "{$format}_path" ] = $destPath;
 			$meta[ "{$format}_url" ]  = $this->getWebUrl( $destPath );
 			wp_update_attachment_metadata( $attachmentId, $meta );
+			
+			$this->logger->info("Updated metadata for attachment ID: $attachmentId with $format path: $destPath");
+		} else {
+			$this->logger->error("Failed to convert $file to $format");
 		}
 
 		return $success;
