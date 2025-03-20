@@ -143,21 +143,30 @@ jobs:
             
             See [CHANGELOG.md](CHANGELOG.md) for details.
 
-      - name: Deploy release info to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
+      # First, commit the updated file to gh-pages branch
+      - name: Configure Git for GitHub Pages
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v4
         with:
-          folder: .
-          target-folder: .
-          clean: false
-          git-config-name: GitHub Actions
-          git-config-email: actions@github.com
-          commit-message: "Update release info for v${{ steps.get_version.outputs.VERSION }}"
-          files: |
-            release-info.json
+          ref: gh-pages
+          path: gh-pages
+          fetch-depth: 0
+
+      - name: Copy release info to gh-pages
+        run: |
+          cp release-info.json gh-pages/
+          cd gh-pages
+          git add release-info.json
+          git commit -m "Update release info for v${{ steps.get_version.outputs.VERSION }}" || echo "No changes to commit"
+          git push
 
       - name: Completion Message
         run: |
           echo "Release v${{ steps.get_version.outputs.VERSION }} has been created!"
-          echo "IMPORTANT: GitHub Pages deployment may still be in progress."
-          echo "Your release-info.json will be available at:"
+          echo "release-info.json has been updated directly on the gh-pages branch."
+          echo "Your release-info.json is available at:"
           echo "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/release-info.json"
