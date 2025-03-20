@@ -73,65 +73,65 @@ jobs:
           PLUGIN_TESTED: ${{ vars.PLUGIN_TESTED || '6.7' }}
           PLUGIN_REQUIRES_PHP: ${{ vars.PLUGIN_REQUIRES_PHP || '8.1' }}
         run: |
-          # Generate release-info.json from scratch instead of modifying existing
+          # Set variables
           VERSION="${{ steps.get_version.outputs.VERSION }}"
           REPO="${{ github.repository }}"
           DATE=$(date +"%Y-%m-%d %H:%M:%S")
           RELEASE_DATE=$(date +"%Y-%m-%d")
           
           # Extract changelog from CHANGELOG.md if it exists
-          CHANGELOG="<h4>$VERSION - $(date +'%B %Y')</h4>\n<ul>\n<li>New version release</li>\n</ul>"
+          CHANGELOG="<h4>$VERSION - $(date +'%B %Y')</h4><ul><li>New version release</li></ul>"
           if [ -f "CHANGELOG.md" ]; then
             ENTRY=$(grep -A20 "## \[$VERSION\]" CHANGELOG.md | grep -v "^##" | grep -v "^$" | head -10)
             if [ ! -z "$ENTRY" ]; then
-              CHANGELOG="<h4>$VERSION - $(date +'%B %Y')</h4>\n<ul>"
+              CHANGELOG="<h4>$VERSION - $(date +'%B %Y')</h4><ul>"
               while IFS= read -r line; do
                 # Remove the leading dash and convert to list item
                 if [[ "$line" =~ ^-[[:space:]]+(.*) ]]; then
                   ITEM="${BASH_REMATCH[1]}"
-                  CHANGELOG="$CHANGELOG\n<li>$ITEM</li>"
+                  CHANGELOG="$CHANGELOG<li>$ITEM</li>"
                 fi
               done <<< "$ENTRY"
-              CHANGELOG="$CHANGELOG\n</ul>"
+              CHANGELOG="$CHANGELOG</ul>"
             fi
           fi
-
-          # Create the JSON content
-          cat > release-info.json << EOL
-{
-  "name": "$PLUGIN_NAME",
-  "slug": "$PLUGIN_SLUG",
-  "version": "$VERSION",
-  "download_url": "https://github.com/$REPO/releases/download/v$VERSION/wp-image-optimizer.zip",
-  "author": "<a href='https://github.com/korneliuszburian'>Korneliusz Burian</a>",
-  "author_profile": "https://github.com/korneliuszburian",
-  "requires": "$PLUGIN_REQUIRES",
-  "tested": "$PLUGIN_TESTED",
-  "requires_php": "$PLUGIN_REQUIRES_PHP",
-  "last_updated": "$DATE",
-  "homepage": "https://github.com/$REPO",
-  "sections": {
-    "description": "High-performance WebP and AVIF image conversion plugin for WordPress.",
-    "installation": "Upload the plugin to your WordPress site and activate it. Configure settings from the 'Settings > WebP & AVIF' menu.",
-    "changelog": "$CHANGELOG"
-  },
-  "icons": {
-    "1x": "https://raw.githubusercontent.com/$REPO/master/assets/icon-128x128.png",
-    "2x": "https://raw.githubusercontent.com/$REPO/master/assets/icon-256x256.png"
-  },
-  "versions": {
-    "$VERSION": {
-      "version": "$VERSION",
-      "zip_url": "https://github.com/$REPO/releases/download/v$VERSION/wp-image-optimizer.zip",
-      "requires": "$PLUGIN_REQUIRES",
-      "tested": "$PLUGIN_TESTED",
-      "requires_php": "$PLUGIN_REQUIRES_PHP",
-      "release_date": "$RELEASE_DATE"
-    }
-  },
-  "current_version": "$VERSION"
-}
-EOL
+          
+          # Use jq to create the JSON file (much safer for YAML)
+          cat > release-info.json << EOF
+          {
+            "name": "$PLUGIN_NAME",
+            "slug": "$PLUGIN_SLUG",
+            "version": "$VERSION",
+            "download_url": "https://github.com/$REPO/releases/download/v$VERSION/wp-image-optimizer.zip",
+            "author": "<a href='https://github.com/korneliuszburian'>Korneliusz Burian</a>",
+            "author_profile": "https://github.com/korneliuszburian",
+            "requires": "$PLUGIN_REQUIRES",
+            "tested": "$PLUGIN_TESTED",
+            "requires_php": "$PLUGIN_REQUIRES_PHP",
+            "last_updated": "$DATE",
+            "homepage": "https://github.com/$REPO",
+            "sections": {
+              "description": "High-performance WebP and AVIF image conversion plugin for WordPress.",
+              "installation": "Upload the plugin to your WordPress site and activate it. Configure settings from the 'Settings > WebP & AVIF' menu.",
+              "changelog": "$CHANGELOG"
+            },
+            "icons": {
+              "1x": "https://raw.githubusercontent.com/$REPO/master/assets/icon-128x128.png",
+              "2x": "https://raw.githubusercontent.com/$REPO/master/assets/icon-256x256.png"
+            },
+            "versions": {
+              "$VERSION": {
+                "version": "$VERSION",
+                "zip_url": "https://github.com/$REPO/releases/download/v$VERSION/wp-image-optimizer.zip",
+                "requires": "$PLUGIN_REQUIRES",
+                "tested": "$PLUGIN_TESTED",
+                "requires_php": "$PLUGIN_REQUIRES_PHP",
+                "release_date": "$RELEASE_DATE"
+              }
+            },
+            "current_version": "$VERSION"
+          }
+          EOF
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
