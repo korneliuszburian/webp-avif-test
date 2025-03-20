@@ -1,0 +1,40 @@
+{
+  "name": "WebP & AVIF Image Optimizer",
+  "slug": "wp-image-optimizer",
+  "author": "<a href='https://your-website.com/'>Your Name</a>",
+  "author_profile": "https://github.com/your-username",
+  "requires": "5.6",
+  "tested": "6.7",
+  "requires_php": "8.1",
+  "rating": 100,
+  "num_ratings": 10,
+  "support_threads": 0,
+  "support_threads_resolved": 0,
+  "last_updated": "2025-03-20 00:00:00",
+  "added": "2025-01-01 00:00:00",
+  "homepage": "https://github.com/your-username/webp-avif-test",
+  "sections": {
+    "description": "High-performance WebP and AVIF image conversion plugin for WordPress.",
+    "installation": "Upload the plugin to your WordPress site and activate it. Configure settings from the 'Settings > WebP & AVIF' menu.",
+    "changelog": "<h4>1.0.0 - March 2025</h4><ul><li>Initial release</li></ul>"
+  },
+  "banners": {
+    "low": "https://example.com/banner-772x250.png",
+    "high": "https://example.com/banner-1544x500.png"
+  },
+  "icons": {
+    "1x": "https://example.com/icon-128x128.png",
+    "2x": "https://example.com/icon-256x256.png"
+  },
+  "versions": {
+    "1.0.0": {
+      "version": "1.0.0",
+      "zip_url": "https://github.com/your-username/webp-avif-test/releases/download/v1.0.0/wp-image-optimizer.zip",
+      "requires": "5.6",
+      "tested": "6.7",
+      "requires_php": "8.1",
+      "release_date": "2025-03-20"
+    }
+  },
+  "current_version": "1.0.0"
+}

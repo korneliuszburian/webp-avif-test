@@ -1,0 +1,74 @@
+name: Build & Release Plugin
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+# Set permissions for GitHub token
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build:
+    name: Build Plugin Package
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Important for proper versioning
+
+      - name: Get the version
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: gd, imagick, mbstring
+          tools: composer:v2
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: |
+          composer install --no-dev --optimize-autoloader
+
+      - name: Update version in plugin file
+        run: |
+          sed -i "s/Version: .*/Version: ${{ steps.get_version.outputs.VERSION }}/" wp-image-optimizer.php
+          sed -i "s/define( 'WP_IMAGE_OPTIMIZER_VERSION', '.*' );/define( 'WP_IMAGE_OPTIMIZER_VERSION', '${{ steps.get_version.outputs.VERSION }}' );/" wp-image-optimizer.php
+
+      - name: Create build directory
+        run: |
+          mkdir -p build
+
+      - name: Create plugin zip with correct filename
+        run: |
+          # Create zip with the right name for the plugin updater
+          zip -r build/wp-image-optimizer.zip . -x ".git/*" ".github/*" ".vscode/*" "build/*" "node_modules/*" ".distignore" ".gitignore" "phpcs.xml.dist" "phpstan.neon" "composer.json" "composer.lock" "README.md" "bin/*" "tests/*"
+
+      - name: Update release info file
+        run: |
+          php bin/update-release-info.php ${{ steps.get_version.outputs.VERSION }} $(date -I)
+          
+      - name: Commit and push release info
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+          git add release-info.json
+          git commit -m "Update release info for v${{ steps.get_version.outputs.VERSION }}"
+          git push origin HEAD:main
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/wp-image-optimizer.zip
+          name: Release ${{ steps.get_version.outputs.VERSION }}
+          body: |
+            ## WebP & AVIF Image Optimizer ${{ steps.get_version.outputs.VERSION }}
+            
+            See [CHANGELOG.md](CHANGELOG.md) for details.
