@@ -47,11 +47,8 @@ if ( class_exists( 'YahnisElsts\\PluginUpdateChecker\\v5\\PucFactory' ) ) {
         'wp-image-optimizer'
     );
     
-    // Set the branch that contains the stable release
-    $updateChecker->setBranch('master');
-    
-    // Optional: If you're using GitHub releases with release assets, you can also set:
-    // $updateChecker->getVcsApi()->enableReleaseAssets();
+    // The update checker will use the metadata URL which points to your release-info.json file
+    // No need to set any other configuration as it will automatically check for updates
 }
 
 // Initialize the plugin
