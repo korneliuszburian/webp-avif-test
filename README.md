@@ -102,16 +102,8 @@ In the Media Library, each image shows its conversion status:
    npm install
    ```
 
-3. Setup Git hooks
-   ```bash
-   npm run prepare
-   ```
-
 ### Development Commands
 
-- **Lint PHP code**: `composer lint`
-- **Fix PHP code style**: `composer fix`
-- **Full code checks**: `composer check-strict`
 - **Build plugin package**: `npm run build`
 
 ### Architecture

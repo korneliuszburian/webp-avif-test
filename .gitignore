@@ -55,3 +55,11 @@ wp-includes/
 
 # Plugin specific
 /wp-image-optimizer.zip
+
+# Husky and linting
+.husky/
+commitlint.config.js
+.eslintrc*
+.stylelintrc*
+phpcs.xml.dist
+phpstan.neon

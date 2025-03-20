@@ -26,21 +26,14 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ vars.PLUGIN_REQUIRES_PHP || '8.1' }}
+          php-version: '8.1'
           extensions: gd, imagick, mbstring
           tools: composer:v2
           coverage: none
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
       - name: Install dependencies
         run: |
           composer install --no-dev --optimize-autoloader
-          npm ci
 
       - name: Update version in plugin file
         run: |
@@ -48,7 +41,29 @@ jobs:
           sed -i "s/define( 'WP_IMAGE_OPTIMIZER_VERSION', '.*' );/define( 'WP_IMAGE_OPTIMIZER_VERSION', '${{ steps.get_version.outputs.VERSION }}' );/" wp-image-optimizer.php
 
       - name: Build plugin
-        run: npm run build
+        run: |
+          # Create build directory
+          mkdir -p build
+          
+          # Create plugin zip
+          zip -r build/wp-image-optimizer.zip . \
+          -x "*.git*" \
+          -x ".github/*" \
+          -x ".vscode/*" \
+          -x "build/*" \
+          -x "node_modules/*" \
+          -x ".distignore" \
+          -x ".gitignore" \
+          -x "phpcs.xml.dist" \
+          -x "phpstan.neon" \
+          -x "composer.json" \
+          -x "composer.lock" \
+          -x "package.json" \
+          -x "package-lock.json" \
+          -x "README.md" \
+          -x "bin/*" \
+          -x "scripts/*" \
+          -x "tests/*"
 
       - name: Update release info file
         env:
