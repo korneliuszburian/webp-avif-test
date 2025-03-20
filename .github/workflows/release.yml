@@ -54,14 +54,26 @@ jobs:
       - name: Update release info file
         run: |
           php bin/update-release-info.php ${{ steps.get_version.outputs.VERSION }} $(date -I)
+
+      # Fix: Checkout main branch before pushing
+      - name: Checkout main branch
+        run: |
+          git fetch origin
+          git checkout main
           
+      - name: Update release info file on main
+        run: |
+          # Apply the same changes to the release-info.json file in the main branch
+          php bin/update-release-info.php ${{ steps.get_version.outputs.VERSION }} $(date -I)
+          
+      # Fix: Properly configure git for commit
       - name: Commit and push release info
         run: |
-          git config --global user.name 'GitHub Actions'
-          git config --global user.email 'actions@github.com'
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "actions@github.com"
           git add release-info.json
           git commit -m "Update release info for v${{ steps.get_version.outputs.VERSION }}"
-          git push origin HEAD:main
+          git push
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
