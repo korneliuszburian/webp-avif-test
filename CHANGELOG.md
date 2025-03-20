@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.0.15] - 2025-03-20
+
+- Feature: ✨ Update GitHub Pages deployment process for release info
+
+
 ## [1.0.14] - 2025-03-20
 
 - Feature: ✨ Add completion message for release creation in workflow
