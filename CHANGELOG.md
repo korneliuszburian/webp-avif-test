@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.0.13] - 2025-03-20
+
+- Code Refactoring: ♻️ Improve release-info.json generation using jq for safety
+
+
 ## [1.0.12] - 2025-03-20
 
 - Code Refactoring: ♻️ Update release script for clarity and improved changelog handling
