@@ -1,6 +1,8 @@
 {
   "name": "WebP & AVIF Image Optimizer",
   "slug": "wp-image-optimizer",
+  "version": "1.0.0",
+  "download_url": "https://github.com/korneliuszburian/webp-avif-test/releases/download/v1.0.0/wp-image-optimizer.zip",
   "author": "<a href='https://github.com/korneliuszburian'>Korneliusz Burian</a>",
   "author_profile": "https://github.com/korneliuszburian",
   "requires": "5.6",
