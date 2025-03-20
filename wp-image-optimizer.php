@@ -40,15 +40,18 @@ if ( class_exists( 'YahnisElsts\\PluginUpdateChecker\\v5\\PucFactory' ) ) {
     // Create metadata URL from repository name
     $metadataUrl = "https://" . explode('/', $githubRepo)[0] . ".github.io/" . explode('/', $githubRepo)[1] . "/release-info.json";
     
-    // Initialize update checker
+    // Initialize update checker with the correct metadata handler
     $updateChecker = YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
         $metadataUrl,
         __FILE__,
         'wp-image-optimizer'
     );
     
-    // The update checker will use the metadata URL which points to your release-info.json file
-    // No need to set any other configuration as it will automatically check for updates
+    // This is important - specify we're using a custom JSON format that's compatible with WordPress.org
+    $updateChecker->addQueryArgFilter(function($queryArgs) {
+        $queryArgs['stability'] = 'stable';
+        return $queryArgs;
+    });
 }
 
 // Initialize the plugin
