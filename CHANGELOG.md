@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.25] - 2025-03-21
+
+- Code Refactoring: ♻️ Clean up unused comments and improve code readability
+- Update release info for v1.0.24.
+
+
 ## [1.0.24] - 2025-03-21
 
 - Feature: ✨ Add settings for converting thumbnails and skipping already converted
