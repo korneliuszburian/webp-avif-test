@@ -1,33 +1,33 @@
 {
   "name": "WebP & AVIF Image Optimizer",
   "slug": "wp-image-optimizer",
-  "version": "1.0.21",
-  "download_url": "https://github.com/korneliuszburian/webp-avif-test/releases/download/v1.0.21/wp-image-optimizer.zip",
+  "version": "1.0.22",
+  "download_url": "https://github.com/korneliuszburian/webp-avif-test/releases/download/v1.0.22/wp-image-optimizer.zip",
   "author": "<a href='https://github.com/korneliuszburian'>Korneliusz Burian</a>",
   "author_profile": "https://github.com/korneliuszburian",
   "requires": "5.8",
   "tested": "6.7",
   "requires_php": "8.1",
-  "last_updated": "2025-03-21 10:25:17",
+  "last_updated": "2025-03-21 10:27:55",
   "homepage": "https://github.com/korneliuszburian/webp-avif-test",
   "sections": {
     "description": "High-performance WebP and AVIF image conversion plugin for WordPress.",
     "installation": "Upload the plugin to your WordPress site and activate it. Configure settings from the 'Settings > WebP & AVIF' menu.",
-    "changelog": "<h4>1.0.21 - March 2025</h4><ul><li>Fix: repair update checker by removing invalid methods</li><li>Update release info for v1.0.21.</li><li>Fix: improve update checker with debug mode and force update button</li><li>Update release info for v1.0.20.</li><li>Fix: repair update checker by removing invalid methods</li><li>Update release info for v1.0.21.</li><li>Fix: improve update checker with debug mode and force update button</li><li>Update release info for v1.0.20.</li><li>Update release info for v1.0.18.</li><li>New release</li></ul>"
+    "changelog": "<h4>1.0.22 - March 2025</h4><ul><li>Fix: 🐛 Improve update checker by refining metadata handling</li><li>Update release info for v1.0.21.</li><li>Fix: repair update checker by removing invalid methods</li><li>Update release info for v1.0.21.</li><li>Fix: improve update checker with debug mode and force update button</li><li>Update release info for v1.0.20.</li><li>Fix: repair update checker by removing invalid methods</li><li>Update release info for v1.0.21.</li></ul>"
   },
   "icons": {
     "1x": "https://raw.githubusercontent.com/korneliuszburian/webp-avif-test/master/assets/icon-128x128.png",
     "2x": "https://raw.githubusercontent.com/korneliuszburian/webp-avif-test/master/assets/icon-256x256.png"
   },
   "versions": {
-    "1.0.21": {
-      "version": "1.0.21",
-      "zip_url": "https://github.com/korneliuszburian/webp-avif-test/releases/download/v1.0.21/wp-image-optimizer.zip",
+    "1.0.22": {
+      "version": "1.0.22",
+      "zip_url": "https://github.com/korneliuszburian/webp-avif-test/releases/download/v1.0.22/wp-image-optimizer.zip",
       "requires": "5.8",
       "tested": "6.7",
       "requires_php": "8.1",
       "release_date": "2025-03-21"
     }
   },
-  "current_version": "1.0.21"
+  "current_version": "1.0.22"
 }
