@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WebP & AVIF Image Optimizer
  * Description: High-performance WebP and AVIF conversion for WordPress images
- * Version: 1.0.21
+ * Version: 1.0.20
  * Author: WebP AVIF Team
  * License: GPL v2 or later
  * Text Domain: wp-image-optimizer
@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WP_IMAGE_OPTIMIZER_VERSION', '1.0.21' );
+define( 'WP_IMAGE_OPTIMIZER_VERSION', '1.0.20' );
 define( 'WP_IMAGE_OPTIMIZER_FILE', __FILE__ );
 define( 'WP_IMAGE_OPTIMIZER_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WP_IMAGE_OPTIMIZER_URL', plugin_dir_url( __FILE__ ) );
@@ -47,24 +47,17 @@ if ( class_exists( 'YahnisElsts\\PluginUpdateChecker\\v5\\PucFactory' ) ) {
         'wp-image-optimizer'
     );
     
-    // This is important - specify we're using a custom JSON format that's compatible with WordPress.org
+    // Add a timestamp parameter to prevent caching
     $updateChecker->addQueryArgFilter(function($queryArgs) {
         $queryArgs['stability'] = 'stable';
-        // Add a timestamp to prevent caching
-        $queryArgs['timestamp'] = time();
+        $queryArgs['t'] = time();
         return $queryArgs;
     });
     
-    // Force more frequent update checks (in seconds)
-    $updateChecker->setCheckPeriod(3600); // Check every hour instead of default 12 hours
-    
-    // Enable debug mode
-    $updateChecker->debugMode = true;
-    
-    // Add filter to add a manual update check button that bypasses all caching
-    add_filter('plugin_action_links_' . plugin_basename(__FILE__), function($links) use ($updateChecker) {
-        $settings_link = '<a href="#" onclick="jQuery.post(ajaxurl, {action: \'puc_check_update\', slug: \'wp-image-optimizer\'}, function(response) { alert(\'Update check performed. Refresh the page to see results.\'); }); return false;">Force Update Check</a>';
-        array_unshift($links, $settings_link);
+    // Add a manual update check option
+    add_filter('plugin_action_links_' . plugin_basename(__FILE__), function($links) {
+        $check_link = '<a href="' . wp_nonce_url(admin_url('update-core.php?force-check=1'), 'upgrade-core') . '">Check for Updates</a>';
+        array_unshift($links, $check_link);
         return $links;
     });
 }
