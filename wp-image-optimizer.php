@@ -30,31 +30,25 @@ if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
 	\WpImageOptimizer\Autoloader::register();
 }
 
-// Setup the automatic update system
 if ( class_exists( 'YahnisElsts\\PluginUpdateChecker\\v5\\PucFactory' ) ) {
-    // Get GitHub repository name from constant or fallback to default
     $githubRepo = defined('WP_IMAGE_OPTIMIZER_GITHUB_REPO') 
         ? WP_IMAGE_OPTIMIZER_GITHUB_REPO 
         : 'korneliuszburian/webp-avif-test';
         
-    // Use the raw GitHub URL for more reliable updates
     $metadataUrl = "https://raw.githubusercontent.com/{$githubRepo}/master/release-info.json";
     
-    // Initialize update checker with the correct metadata handler
     $updateChecker = YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
         $metadataUrl,
         __FILE__,
         'wp-image-optimizer'
     );
     
-    // Add a timestamp parameter to prevent caching
     $updateChecker->addQueryArgFilter(function($queryArgs) {
         $queryArgs['stability'] = 'stable';
         $queryArgs['t'] = time();
         return $queryArgs;
     });
     
-    // Add a manual update check option
     add_filter('plugin_action_links_' . plugin_basename(__FILE__), function($links) {
         $check_link = '<a href="' . wp_nonce_url(admin_url('update-core.php?force-check=1'), 'upgrade-core') . '">Check for Updates</a>';
         array_unshift($links, $check_link);
@@ -62,15 +56,11 @@ if ( class_exists( 'YahnisElsts\\PluginUpdateChecker\\v5\\PucFactory' ) ) {
     });
 }
 
-// Initialize the plugin
 ( function () {
-	// Create dependency injection container
 	$container = new \WpImageOptimizer\Core\Container();
 
-	// Register services
 	require_once __DIR__ . '/config/services.php';
 
-	// Boot the plugin
 	$plugin = $container->get( 'plugin' );
 	$plugin->boot();
 } )();
