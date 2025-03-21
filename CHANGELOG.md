@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.21] - 2025-03-21
+
+- Fix: improve update checker with debug mode and force update button
+- Update release info for v1.0.20.
+
+
 ## [1.0.20] - 2025-03-21
 
 - Update release info for v1.0.18.
