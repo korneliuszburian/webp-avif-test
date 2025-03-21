@@ -37,8 +37,8 @@ if ( class_exists( 'YahnisElsts\\PluginUpdateChecker\\v5\\PucFactory' ) ) {
         ? WP_IMAGE_OPTIMIZER_GITHUB_REPO 
         : 'korneliuszburian/webp-avif-test';
         
-    // Create metadata URL from repository name
-    $metadataUrl = "https://" . explode('/', $githubRepo)[0] . ".github.io/" . explode('/', $githubRepo)[1] . "/plugin-update.json";
+    // Use the raw GitHub URL for more reliable updates
+    $metadataUrl = "https://raw.githubusercontent.com/{$githubRepo}/master/release-info.json";
     
     // Initialize update checker with the correct metadata handler
     $updateChecker = YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
