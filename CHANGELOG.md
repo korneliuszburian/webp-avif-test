@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.22] - 2025-03-21
+
+- Fix: 🐛 Improve update checker by refining metadata handling
+- Update release info for v1.0.21.
+
+
 ## [1.0.21] - 2025-03-21
 
 - Fix: repair update checker by removing invalid methods
