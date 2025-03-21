@@ -4,7 +4,6 @@
  * Service definitions for dependency injection container
  */
 
-// Core services
 $container->set(
 	'plugin',
 	function ( $c ) {
@@ -19,7 +18,6 @@ $container->set(
 	}
 );
 
-// Utility services
 $container->set(
 	'logger',
 	function ( $c ) {
@@ -41,7 +39,6 @@ $container->set(
 	}
 );
 
-// Converters
 $container->set(
 	'webp_converter',
 	function ( $c ) {
