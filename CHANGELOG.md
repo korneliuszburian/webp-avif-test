@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.26] - 2025-03-21
+
+- Remove: 🚮 Delete debug-gh-pages.md as it is no longer needed.
+- Update release info for v1.0.25.
+
+
 ## [1.0.25] - 2025-03-21
 
 - Code Refactoring: ♻️ Clean up unused comments and improve code readability
