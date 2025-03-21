@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.16] - 2025-03-21
+
+- Fix: reset version back to 1.0.15
+- Chore: 📝 Remove outdated entry for version 1.0.16 from changelog.
+- Chore: update version to 1.0.24.
+- Fix: clean up duplicate changelog entries
+
+
 ## [1.0.15] - 2025-03-20
 
 - Feature: ✨ Update GitHub Pages deployment process for release info
