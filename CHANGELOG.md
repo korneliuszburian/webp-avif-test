@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.23] - 2025-03-21
+
+- Remove: 🚮 Remove commented service definitions from configuration files.
+- Remove: 🚮 Remove commented autoloader fallback in main plugin file.
+- Update release info for v1.0.22.
+
+
 ## [1.0.22] - 2025-03-21
 
 - Fix: 🐛 Improve update checker by refining metadata handling
