@@ -2,6 +2,12 @@
 
 ## [1.0.21] - 2025-03-21
 
+- Fix: repair update checker by removing invalid methods
+- Update release info for v1.0.21.
+
+
+## [1.0.21] - 2025-03-21
+
 - Fix: improve update checker with debug mode and force update button
 - Update release info for v1.0.20.
 
