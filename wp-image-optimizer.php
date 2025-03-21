@@ -38,7 +38,7 @@ if ( class_exists( 'YahnisElsts\\PluginUpdateChecker\\v5\\PucFactory' ) ) {
         : 'korneliuszburian/webp-avif-test';
         
     // Create metadata URL from repository name
-    $metadataUrl = "https://" . explode('/', $githubRepo)[0] . ".github.io/" . explode('/', $githubRepo)[1] . "/release-info.json";
+    $metadataUrl = "https://" . explode('/', $githubRepo)[0] . ".github.io/" . explode('/', $githubRepo)[1] . "/plugin-update.json";
     
     // Initialize update checker with the correct metadata handler
     $updateChecker = YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
