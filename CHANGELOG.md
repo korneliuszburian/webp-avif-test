@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.0.18] - 2025-03-21
+
+- Fix: update release workflow to dynamically update release-info.json in master branch
+
+
 ## [1.0.17] - 2025-03-21
 
 - Fix: update the plugin to use plugin-update.json for auto-updates
