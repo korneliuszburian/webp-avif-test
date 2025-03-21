@@ -22,7 +22,6 @@ define( 'WP_IMAGE_OPTIMIZER_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WP_IMAGE_OPTIMIZER_URL', plugin_dir_url( __FILE__ ) );
 define( 'WP_IMAGE_OPTIMIZER_BASENAME', plugin_basename( __FILE__ ) );
 
-// Load Composer autoloader if available, or use manual autoloader
 if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
 	require_once __DIR__ . '/vendor/autoload.php';
 } else {
