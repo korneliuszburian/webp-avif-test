@@ -8,12 +8,12 @@
   "requires": "5.8",
   "tested": "6.7",
   "requires_php": "8.1",
-  "last_updated": "2025-03-21 10:19:31",
+  "last_updated": "2025-03-21 10:25:17",
   "homepage": "https://github.com/korneliuszburian/webp-avif-test",
   "sections": {
     "description": "High-performance WebP and AVIF image conversion plugin for WordPress.",
     "installation": "Upload the plugin to your WordPress site and activate it. Configure settings from the 'Settings > WebP & AVIF' menu.",
-    "changelog": "<h4>1.0.21 - March 2025</h4><ul><li>Fix: improve update checker with debug mode and force update button</li><li>Update release info for v1.0.20.</li><li>Update release info for v1.0.18.</li><li>New release</li><li>Fix: update release workflow to dynamically update release-info.json in master branch</li></ul>"
+    "changelog": "<h4>1.0.21 - March 2025</h4><ul><li>Fix: repair update checker by removing invalid methods</li><li>Update release info for v1.0.21.</li><li>Fix: improve update checker with debug mode and force update button</li><li>Update release info for v1.0.20.</li><li>Fix: repair update checker by removing invalid methods</li><li>Update release info for v1.0.21.</li><li>Fix: improve update checker with debug mode and force update button</li><li>Update release info for v1.0.20.</li><li>Update release info for v1.0.18.</li><li>New release</li></ul>"
   },
   "icons": {
     "1x": "https://raw.githubusercontent.com/korneliuszburian/webp-avif-test/master/assets/icon-128x128.png",
