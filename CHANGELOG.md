@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.0.19] - 2025-03-21
+
+- New release
+
+
 ## [1.0.18] - 2025-03-21
 
 - Fix: update release workflow to dynamically update release-info.json in master branch
