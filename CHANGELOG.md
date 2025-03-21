@@ -10,6 +10,11 @@
 - New release
 
 
+## [1.0.16] - 2025-03-21
+
+- New release
+
+
 ## [1.0.15] - 2025-03-20
 
 - Feature: ✨ Update GitHub Pages deployment process for release info
