@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.24] - 2025-03-21
+
+- Feature: ✨ Add settings for converting thumbnails and skipping already converted
+- Update release info for v1.0.23.
+
+
 ## [1.0.23] - 2025-03-21
 
 - Remove: 🚮 Remove commented service definitions from configuration files.
