@@ -108,6 +108,30 @@ class AdminPage {
 			)
 		);
 
+		add_settings_field(
+			'wp_image_optimizer_convert_thumbnails',
+			__( 'Convert Thumbnails', 'wp-image-optimizer' ),
+			array( $this, 'renderCheckboxField' ),
+			'wp_image_optimizer',
+			'wp_image_optimizer_general',
+			array(
+				'id'          => 'convert_thumbnails',
+				'description' => __( 'Also convert thumbnail sizes to WebP and AVIF formats', 'wp-image-optimizer' ),
+			)
+		);
+
+		add_settings_field(
+			'wp_image_optimizer_skip_converted',
+			__( 'Skip Already Converted', 'wp-image-optimizer' ),
+			array( $this, 'renderCheckboxField' ),
+			'wp_image_optimizer',
+			'wp_image_optimizer_general',
+			array(
+				'id'          => 'skip_converted',
+				'description' => __( "Don't convert already converted images in bulk", 'wp-image-optimizer' ),
+			)
+		);
+
 		// WebP settings section
 		add_settings_section(
 			'wp_image_optimizer_webp',

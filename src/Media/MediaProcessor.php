@@ -81,6 +81,11 @@ class MediaProcessor {
 
 		$result['success'] = $result['webp'] || $result['avif'];
 
+		// Check if we should convert thumbnails
+        if ($this->settings->get('convert_thumbnails')) {
+            $this->convertThumbnails($attachmentId);
+        }
+
 		return $result;
 	}
 
@@ -88,11 +93,11 @@ class MediaProcessor {
 	 * Bulk convert multiple images
 	 * 
 	 * @param array $ids Array of attachment IDs to convert
-	 * @param string|null $processId Optional process ID for tracking
+	 * @param string $processId Optional process ID for tracking
 	 */
-	public function bulkConvertImages( array $ids, string $processId = null ): void {
+	public function bulkConvertImages( array $ids, string $processId = '' ): void {
 		$totalImages = count( $ids );
-		if ($processId === null) {
+		if ($processId === '') {
 		    $processId = 'bulk_convert_' . uniqid();
 		}
 
@@ -219,5 +224,123 @@ class MediaProcessor {
 		);
 
 		return $attachmentId ? (int) $attachmentId : null;
+	}
+
+	/**
+	 * Convert all thumbnails for an attachment
+	 */
+	private function convertThumbnails(int $attachmentId): void {
+		$this->logger->info("Converting thumbnails for attachment ID: $attachmentId");
+		
+		// Get all the different sizes metadata for this attachment
+		$metadata = wp_get_attachment_metadata($attachmentId);
+		
+		if (!isset($metadata['sizes']) || !is_array($metadata['sizes'])) {
+			$this->logger->warning("No sizes found for attachment ID: $attachmentId");
+			return;
+		}
+		
+		// Get the original file path and info
+		$originalFilePath = get_attached_file($attachmentId);
+		if (!$originalFilePath) {
+			$this->logger->error("Original file not found for attachment ID: $attachmentId");
+			return;
+		}
+		
+		$uploadDir = wp_upload_dir();
+		$baseDir = dirname($originalFilePath);
+		
+		// Process each thumbnail
+		foreach ($metadata['sizes'] as $size => $sizeData) {
+			if (!isset($sizeData['file'])) {
+				continue;
+			}
+			
+			$thumbnailPath = $baseDir . '/' . $sizeData['file'];
+			
+			if (file_exists($thumbnailPath)) {
+				$this->logger->info("Converting thumbnail: $thumbnailPath");
+				$this->convertImage($thumbnailPath);
+			} else {
+				$this->logger->warning("Thumbnail file not found: $thumbnailPath");
+			}
+		}
+	}
+
+	/**
+	 * Convert a single image file to WebP and AVIF
+	 */
+	private function convertImage(string $filePath): array {
+		$result = [
+			'success' => false,
+			'webp' => false,
+			'avif' => false,
+		];
+
+		if (!file_exists($filePath)) {
+			$this->logger->error("File not found: $filePath");
+			return $result;
+		}
+
+		// Check if we should skip already converted images
+		$skipConverted = $this->settings->get('skip_converted');
+		
+		// Convert to WebP if enabled
+		if ($this->settings->get('enable_webp')) {
+			$webpPath = $filePath . '.webp';
+			
+			if (!$skipConverted || !file_exists($webpPath)) {
+				$result['webp'] = $this->webpConverter->convert(
+					$filePath, 
+					$webpPath, 
+					$this->getWebpSettings()
+				);
+				$this->logger->info("WebP conversion result for $filePath: " . ($result['webp'] ? 'success' : 'failed'));
+			} else {
+				$result['webp'] = true; // Already exists
+				$this->logger->info("Skipping WebP conversion for $filePath (already exists)");
+			}
+		}
+
+		// Convert to AVIF if enabled
+		if ($this->settings->get('enable_avif')) {
+			$avifPath = $filePath . '.avif';
+			
+			if (!$skipConverted || !file_exists($avifPath)) {
+				$result['avif'] = $this->avifConverter->convert(
+					$filePath, 
+					$avifPath, 
+					$this->getAvifSettings()
+				);
+				$this->logger->info("AVIF conversion result for $filePath: " . ($result['avif'] ? 'success' : 'failed'));
+			} else {
+				$result['avif'] = true; // Already exists
+				$this->logger->info("Skipping AVIF conversion for $filePath (already exists)");
+			}
+		}
+
+		$result['success'] = ($result['webp'] || $result['avif']);
+		return $result;
+	}
+	
+	/**
+	 * Get WebP conversion settings from plugin settings
+	 */
+	private function getWebpSettings(): array {
+		return [
+			'quality' => $this->settings->get('webp_quality', 80),
+			'lossless' => $this->settings->get('webp_lossless', false),
+		];
+	}
+	
+	/**
+	 * Get AVIF conversion settings from plugin settings
+	 */
+	private function getAvifSettings(): array {
+		return [
+			'quality' => $this->settings->get('avif_quality', 80),
+			'speed' => $this->settings->get('avif_speed', 6),
+			'lossless' => $this->settings->get('avif_lossless', false),
+		];
 	}
 }
