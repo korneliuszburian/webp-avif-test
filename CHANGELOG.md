@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.17] - 2025-03-21
+
+- Fix: update the plugin to use plugin-update.json for auto-updates
+- Feature: add manual release info updater script and debug file
+
+
 ## [1.0.16] - 2025-03-21
 
 - Fix: reset version back to 1.0.15
