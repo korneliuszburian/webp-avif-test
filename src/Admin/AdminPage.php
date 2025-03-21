@@ -30,23 +30,16 @@ class AdminPage {
         $this->progressManager = $progressManager;
     }
 	
-	/**
-	 * Register hooks for admin page
-	 */
 	public function registerHooks(): void {
 		add_action( 'admin_menu', array( $this, 'addMenuPages' ) );
 		add_action( 'admin_init', array( $this, 'registerSettings' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueueAssets' ) );
 
-		// Ajax handlers
 		add_action( 'wp_ajax_wp_image_optimizer_get_progress', array( $this, 'ajaxGetProgress' ) );
 		add_action( 'wp_ajax_wp_image_optimizer_convert_single', array( $this, 'ajaxConvertSingle' ) );
 		add_action( 'wp_ajax_wp_image_optimizer_bulk_convert', array( $this, 'ajaxBulkConvert' ) );
 	}
 
-	/**
-	 * Add menu pages
-	 */
 	public function addMenuPages(): void {
 		add_options_page(
 			__( 'WebP & AVIF Optimizer', 'wp-image-optimizer' ),
@@ -57,13 +50,9 @@ class AdminPage {
 		);
 	}
 
-	/**
-	 * Register settings
-	 */
 	public function registerSettings(): void {
 		register_setting( 'wp_image_optimizer_settings', 'wp_image_optimizer_settings' );
 
-		// General settings section
 		add_settings_section(
 			'wp_image_optimizer_general',
 			__( 'General Settings', 'wp-image-optimizer' ),
@@ -71,7 +60,6 @@ class AdminPage {
 			'wp_image_optimizer'
 		);
 
-		// Add settings fields
 		add_settings_field(
 			'wp_image_optimizer_auto_convert',
 			__( 'Auto Convert on Upload', 'wp-image-optimizer' ),
@@ -132,7 +120,6 @@ class AdminPage {
 			)
 		);
 
-		// WebP settings section
 		add_settings_section(
 			'wp_image_optimizer_webp',
 			__( 'WebP Settings', 'wp-image-optimizer' ),
@@ -167,7 +154,6 @@ class AdminPage {
 			)
 		);
 
-		// AVIF settings section
 		add_settings_section(
 			'wp_image_optimizer_avif',
 			__( 'AVIF Settings', 'wp-image-optimizer' ),
@@ -217,7 +203,6 @@ class AdminPage {
 			)
 		);
 
-		// Performance settings section
 		add_settings_section(
 			'wp_image_optimizer_performance',
 			__( 'Performance Settings', 'wp-image-optimizer' ),
@@ -253,7 +238,6 @@ class AdminPage {
 			)
 		);
 
-		// Advanced settings section
 		add_settings_section(
 			'wp_image_optimizer_advanced',
 			__( 'Advanced Settings', 'wp-image-optimizer' ),
@@ -280,15 +264,10 @@ class AdminPage {
 		);
 	}
 
-	/**
-	 * Enqueue admin assets
-	 */
 	public function enqueueAssets( string $hook ): void {
-	    // For media screens (grid and edit views) and plugin settings page
 	    $media_screens = array('upload.php', 'post.php', 'post-new.php', 'media-new.php');
 	    $is_media_or_settings = in_array($hook, $media_screens) || $hook === 'settings_page_wp-image-optimizer';
 		
-		// Only if we're on a media screen or the plugin settings page
 		if ($is_media_or_settings) {
 		    $this->logger->info("Enqueuing assets on screen: $hook");
 		    
@@ -324,9 +303,6 @@ class AdminPage {
 		}
 	}
 
-	/**
-	 * Render settings page
-	 */
 	public function renderSettingsPage(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
@@ -364,9 +340,6 @@ class AdminPage {
 		<?php
 	}
 
-	/**
-	 * Render settings tab
-	 */
 	private function renderSettingsTab(): void {
 		?>
 		<form action="options.php" method="post">
@@ -379,9 +352,6 @@ class AdminPage {
 		<?php
 	}
 
-	/**
-	 * Render bulk tab
-	 */
 	private function renderBulkTab(): void {
 		$supportedCount = $this->stats->getSupportedFilesCount();
 		?>
@@ -408,9 +378,6 @@ class AdminPage {
 		<?php
 	}
 
-	/**
-	 * Render statistics tab
-	 */
 	private function renderStatisticsTab(): void {
 		$stats      = $this->stats->countConvertedImages();
 		$spaceSaved = $this->stats->calculateSpaceSaved();
@@ -464,9 +431,6 @@ class AdminPage {
 		<?php
 	}
 
-	/**
-	 * Section callbacks
-	 */
 	public function renderGeneralSection(): void {
 		echo '<p>' . __( 'General settings for WebP & AVIF image optimization.', 'wp-image-optimizer' ) . '</p>';
 	}
@@ -487,9 +451,6 @@ class AdminPage {
 		echo '<p>' . __( 'Advanced settings for WebP & AVIF image optimization.', 'wp-image-optimizer' ) . '</p>';
 	}
 
-	/**
-	 * Field renderers
-	 */
 	public function renderCheckboxField( array $args ): void {
 		$id          = $args['id'];
 		$description = $args['description'] ?? '';
@@ -554,9 +515,6 @@ class AdminPage {
 		<?php
 	}
 
-	/**
-	 * Ajax handlers
-	 */
 	public function ajaxGetProgress(): void {
 	    $this->logger->info('AJAX get_progress called');
 	    
@@ -598,15 +556,12 @@ class AdminPage {
 			wp_send_json_error( array( 'message' => 'Missing attachment ID' ) );
 		}
 
-		// Log the conversion request
 		$this->logger->info( "Single conversion requested for attachment ID: $attachment_id" );
 		
-		// Get the MediaProcessor instance from container
 		$mediaProcessor = $this->container->get('media_processor');
 		
 		$result = $mediaProcessor->convertSingleImage( $attachment_id );
 		
-		// Log the result
         $this->logger->info( "Conversion result for attachment ID: $attachment_id", [
             'success' => $result['success'],
             'webp' => $result['webp'],
@@ -638,7 +593,6 @@ class AdminPage {
 
 		global $wpdb;
 
-		// Get all image attachments
 		$attachments = $wpdb->get_results(
 			"SELECT ID FROM {$wpdb->posts} 
             WHERE post_type = 'attachment' 
@@ -652,23 +606,17 @@ class AdminPage {
 			$attachments
 		);
 
-		// Generate a unique process ID
 		$process_id = 'bulk_convert_' . uniqid();
 		
-		// Log the bulk conversion request
 		$this->logger->info( "Bulk conversion requested with process ID: $process_id", [
 		    'total_images' => count($ids)
 		]);
 
-		// Start progress tracking
         $this->progressManager->startProcess($process_id, count($ids));
         
-        // Get the MediaProcessor from container
 		$mediaProcessor = $this->container->get('media_processor');
 		
-		// Run in non-blocking way
 		if (count($ids) > 0) {
-    		// Start the conversion in a non-blocking way
     		$this->scheduleBulkConversion($mediaProcessor, $process_id, $ids);
     		
     		$this->logger->info("Bulk conversion started for process ID: $process_id");
@@ -684,11 +632,7 @@ class AdminPage {
 		}
 	}
 	
-	/**
-	 * Schedule bulk conversion to run immediately with a given process ID
-	 */
 	private function scheduleBulkConversion($mediaProcessor, string $process_id, array $ids): void {
-	    // Process the images in batches
         $mediaProcessor->bulkConvertImages($ids, $process_id);
 	}
 }
