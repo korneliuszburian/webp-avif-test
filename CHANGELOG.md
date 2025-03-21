@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.0.20] - 2025-03-21
+
+- Update release info for v1.0.18.
+
+
 ## [1.0.19] - 2025-03-21
 
 - New release
