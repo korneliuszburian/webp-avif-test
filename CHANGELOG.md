@@ -4,31 +4,17 @@
 
 - New release
 
-
-## [1.0.16] - 2025-03-21
-
-- New release
-
-
-## [1.0.16] - 2025-03-21
-
-- New release
-
-
 ## [1.0.15] - 2025-03-20
 
 - Feature: ✨ Update GitHub Pages deployment process for release info
-
 
 ## [1.0.14] - 2025-03-20
 
 - Feature: ✨ Add completion message for release creation in workflow
 
-
 ## [1.0.13] - 2025-03-20
 
 - Code Refactoring: ♻️ Improve release-info.json generation using jq for safety
-
 
 ## [1.0.12] - 2025-03-20
 
@@ -37,7 +23,6 @@
 - Feature: ✨ Generate release-info.json dynamically in workflow
 - Remove: 🚮 Remove obsolete configuration files and .htaccess.
 
-
 ## [1.0.11] - 2025-03-20
 
 - Feature: ✨ Add version and download URL to release info in workflow
@@ -45,9 +30,7 @@
 - Feature: ✨ Add version and download URL to release-info.json
 - Remove: 🚮 Remove deprecated GitHub workflows and build scripts.
 
-
 ## [1.0.10] - 2025-03-20
 
 - Code Refactoring: ♻️ Simplify update checker configuration for plugin updates
 - Remove: 🚮 Remove CHANGELOG.md and related scripts from the repository.
-
