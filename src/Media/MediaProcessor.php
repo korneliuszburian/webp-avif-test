@@ -13,7 +13,8 @@ class MediaProcessor {
 		private ConverterInterface $avifConverter,
 		private Settings $settings,
 		private ProgressManager $progressManager,
-		private Logger $logger
+		private Logger $logger,
+		private FormatSelector $formatSelector
 	) {}
 
 	public function processUploadedMedia( array $upload ): array {
@@ -44,36 +45,51 @@ class MediaProcessor {
 		return $upload;
 	}
 
-	public function convertSingleImage( int $attachmentId ): array {
-		$result = array(
+	/**
+	 * Convert a single attachment image to WebP and AVIF formats
+	 *
+	 * @param int $attachmentId The attachment ID
+	 * @return array Results of the conversion
+	 */
+	public function convertSingleImage(int $attachmentId): array {
+		$result = [
 			'success' => false,
-			'webp'    => false,
-			'avif'    => false,
-		);
+			'webp' => false,
+			'avif' => false,
+		];
 
-		$file = get_attached_file( $attachmentId );
-		if ( ! $file || ! $this->isSupportedImage( $file ) ) {
+		$file = get_attached_file($attachmentId);
+		if (!$file || !$this->isSupportedImage($file)) {
 			$this->logger->error("Invalid file for attachment ID $attachmentId: " . ($file ?: 'null'));
 			return $result;
 		}
 
-        $this->logger->info("Converting single image: $attachmentId - $file");
+		$this->logger->info("Converting single image: $attachmentId - $file");
 
-		if ( $this->settings->get( 'enable_webp', true ) && $this->webpConverter->isSupported() ) {
-			$result['webp'] = $this->convertToFormat( $attachmentId, 'webp' );
+		// Convert main image
+		if ($this->settings->get('enable_webp', true) && $this->webpConverter->isSupported()) {
+			$result['webp'] = $this->convertToFormat($attachmentId, 'webp');
 			$this->logger->info("WebP conversion result: " . ($result['webp'] ? 'success' : 'failed'));
 		}
 
-		if ( $this->settings->get( 'enable_avif', true ) && $this->avifConverter->isSupported() ) {
-			$result['avif'] = $this->convertToFormat( $attachmentId, 'avif' );
+		if ($this->settings->get('enable_avif', true) && $this->avifConverter->isSupported()) {
+			$result['avif'] = $this->convertToFormat($attachmentId, 'avif');
 			$this->logger->info("AVIF conversion result: " . ($result['avif'] ? 'success' : 'failed'));
 		}
 
-		$result['success'] = $result['webp'] || $result['avif'];
-
-        if ($this->settings->get('convert_thumbnails')) {
-            $this->convertThumbnails($attachmentId);
-        }
+		// Convert thumbnails if enabled
+		if ($this->settings->get('convert_thumbnails')) {
+			$thumbnailResults = $this->convertThumbnails($attachmentId);
+			$result['thumbnails'] = $thumbnailResults;
+			$result['success'] = $result['webp'] || $result['avif'] || $thumbnailResults['success'];
+			
+			// Log a summary of the thumbnail conversion
+			$this->logger->info("Thumbnails converted: {$thumbnailResults['converted']}, " . 
+							"failed: {$thumbnailResults['failed']}, " . 
+							"skipped: {$thumbnailResults['skipped']}");
+		} else {
+			$result['success'] = $result['webp'] || $result['avif'];
+		}
 
 		return $result;
 	}
@@ -118,41 +134,85 @@ class MediaProcessor {
 		$this->logger->info( "Completed bulk conversion of $totalImages images", array( 'process_id' => $processId ) );
 	}
 
-	private function convertToFormat( int $attachmentId, string $format ): bool {
-		$file = get_attached_file( $attachmentId );
-		if ( ! $file ) {
+	/**
+	 * Convert attachment file to a specific format and update metadata
+	 *
+	 * @param int $attachmentId The attachment ID
+	 * @param string $format Format to convert to ('webp' or 'avif')
+	 * @return bool Success or failure
+	 */
+	private function convertToFormat(int $attachmentId, string $format): bool {
+		$file = get_attached_file($attachmentId);
+		if (!$file) {
 			$this->logger->error("Cannot get attached file for attachment ID: $attachmentId");
 			return false;
 		}
 
-		$destPath  = $this->getDestinationPath( $file, $format );
+		// Convert the file
 		$converter = $format === 'webp' ? $this->webpConverter : $this->avifConverter;
+		$options = $format === 'webp' ? $this->getWebpSettings() : $this->getAvifSettings();
+		
+		$success = $this->convertFileToFormat($file, $format, $converter, $options);
 
-		$this->logger->info("Converting $file to $format at $destPath");
-		$success = $converter->convert( $file, $destPath, array() );
-
-		if ( $success ) {
-			$meta = wp_get_attachment_metadata( $attachmentId );
+		// Update metadata if conversion was successful
+		if ($success) {
+			$destPath = $this->getDestinationPath($file, $format);
+			$meta = wp_get_attachment_metadata($attachmentId);
 			if (!is_array($meta)) {
-			    $meta = array();
-			    $this->logger->warning("No metadata found for attachment ID: $attachmentId, creating new metadata");
+				$meta = array();
+				$this->logger->warning("No metadata found for attachment ID: $attachmentId, creating new metadata");
 			}
 			
-			$meta[ "{$format}_path" ] = $destPath;
-			$meta[ "{$format}_url" ]  = $this->getWebUrl( $destPath );
-			wp_update_attachment_metadata( $attachmentId, $meta );
+			$meta["{$format}_path"] = $destPath;
+			$meta["{$format}_url"] = $this->getWebUrl($destPath);
+			wp_update_attachment_metadata($attachmentId, $meta);
 			
 			$this->logger->info("Updated metadata for attachment ID: $attachmentId with $format path: $destPath");
-		} else {
-			$this->logger->error("Failed to convert $file to $format");
 		}
 
 		return $success;
 	}
 
-	private function getDestinationPath( string $sourcePath, string $format ): string {
-		$pathInfo = pathinfo( $sourcePath );
-		return $pathInfo['dirname'] . '/' . $pathInfo['filename'] . '.' . $format;
+	/**
+	 * Get the destination path for a converted image, handling special file naming patterns
+	 *
+	 * @param string $sourcePath Original file path
+	 * @param string $format Target format (webp or avif)
+	 * @return string Path to save the converted image
+	 */
+	private function getDestinationPath(string $sourcePath, string $format): string {
+		$pathInfo = pathinfo($sourcePath);
+		$dirname = $pathInfo['dirname'];
+		$filename = $pathInfo['filename'];
+		$originalExt = strtolower($pathInfo['extension'] ?? '');
+		
+		// Check for common format indicators in filename (_jpg, _png, _webp, _avif)
+		$formatPatterns = ['_jpg', '_jpeg', '_png', '_gif', '_webp', '_avif'];
+		$hasFormatPattern = false;
+		
+		foreach ($formatPatterns as $pattern) {
+			if (str_ends_with(strtolower($filename), $pattern)) {
+				$hasFormatPattern = true;
+				
+				// If converting to the same format that's in the filename, keep original name
+				// e.g., "image_avif.jpg" converting to avif should become "image_avif.avif"
+				if (str_ends_with(strtolower($filename), "_{$format}")) {
+					return "{$dirname}/{$filename}.{$format}";
+				}
+				
+				// Replace the existing format indicator with the new one
+				// e.g., "image_png.jpg" to "image_avif.avif"
+				foreach ($formatPatterns as $oldPattern) {
+					if (str_ends_with(strtolower($filename), $oldPattern)) {
+						$baseFilename = substr($filename, 0, strlen($filename) - strlen($oldPattern));
+						return "{$dirname}/{$baseFilename}_{$format}.{$format}";
+					}
+				}
+			}
+		}
+		
+		// Standard case - just append the new extension
+		return "{$dirname}/{$filename}.{$format}";
 	}
 
 	private function getWebUrl( string $filePath ): string {
@@ -187,23 +247,39 @@ class MediaProcessor {
 		return $attachmentId ? (int) $attachmentId : null;
 	}
 
-	private function convertThumbnails(int $attachmentId): void {
+	/**
+	 * Convert all thumbnails for an attachment and update metadata
+	 *
+	 * @param int $attachmentId The attachment ID
+	 * @return array Results of the thumbnail conversions
+	 */
+	private function convertThumbnails(int $attachmentId): array {
 		$this->logger->info("Converting thumbnails for attachment ID: $attachmentId");
 		
 		$metadata = wp_get_attachment_metadata($attachmentId);
+		$results = [
+			'success' => false,
+			'converted' => 0,
+			'failed' => 0,
+			'skipped' => 0,
+		];
 		
 		if (!isset($metadata['sizes']) || !is_array($metadata['sizes'])) {
 			$this->logger->warning("No sizes found for attachment ID: $attachmentId");
-			return;
+			return $results;
 		}
 		
 		$originalFilePath = get_attached_file($attachmentId);
 		if (!$originalFilePath) {
 			$this->logger->error("Original file not found for attachment ID: $attachmentId");
-			return;
+			return $results;
 		}
 		
-		$uploadDir = wp_upload_dir();
+		// Initialize thumbnail_conversions in metadata if it doesn't exist
+		if (!isset($metadata['thumbnail_conversions']) || !is_array($metadata['thumbnail_conversions'])) {
+			$metadata['thumbnail_conversions'] = [];
+		}
+		
 		$baseDir = dirname($originalFilePath);
 		
 		foreach ($metadata['sizes'] as $size => $sizeData) {
@@ -215,13 +291,78 @@ class MediaProcessor {
 			
 			if (file_exists($thumbnailPath)) {
 				$this->logger->info("Converting thumbnail: $thumbnailPath");
-				$this->convertImage($thumbnailPath);
+				
+				$conversionResult = $this->convertImage($thumbnailPath);
+				
+				// Store the conversion results in metadata
+				if ($conversionResult['success']) {
+					$results['converted']++;
+					$results['success'] = true;
+					
+					// Update thumbnail conversion metadata
+					$metadata['thumbnail_conversions'][$size] = [
+						'webp' => $conversionResult['webp'] ? $this->getDestinationPath($thumbnailPath, 'webp') : null,
+						'avif' => $conversionResult['avif'] ? $this->getDestinationPath($thumbnailPath, 'avif') : null,
+						'webp_url' => $conversionResult['webp'] ? $this->getWebUrl($this->getDestinationPath($thumbnailPath, 'webp')) : null,
+						'avif_url' => $conversionResult['avif'] ? $this->getWebUrl($this->getDestinationPath($thumbnailPath, 'avif')) : null,
+					];
+				} else {
+					$results['failed']++;
+				}
 			} else {
 				$this->logger->warning("Thumbnail file not found: $thumbnailPath");
+				$results['skipped']++;
 			}
 		}
+		
+		// Update the metadata with thumbnail conversion information
+		if ($results['converted'] > 0) {
+			wp_update_attachment_metadata($attachmentId, $metadata);
+			$this->logger->info("Updated thumbnail conversion metadata for attachment ID: $attachmentId");
+		}
+		
+		return $results;
 	}
 
+	/**
+	 * Convert a single file to a specific format
+	 *
+	 * @param string $sourcePath Source file path
+	 * @param string $format Format to convert to ('webp' or 'avif')
+	 * @param ConverterInterface $converter The converter to use
+	 * @param array $options Conversion options
+	 * @return bool Success or failure
+	 */
+	private function convertFileToFormat(string $sourcePath, string $format, ConverterInterface $converter, array $options = []): bool {
+		if (!file_exists($sourcePath)) {
+			$this->logger->error("Source file not found: $sourcePath");
+			return false;
+		}
+
+		$destPath = $this->getDestinationPath($sourcePath, $format);
+		
+		// Skip if the file already exists and skip_converted is enabled
+		if ($this->settings->get('skip_converted', false) && file_exists($destPath)) {
+			$this->logger->info("Skipping conversion for $sourcePath - $format version already exists");
+			return true;
+		}
+		
+		$this->logger->info("Converting $sourcePath to $format at $destPath");
+		$success = $converter->convert($sourcePath, $destPath, $options);
+		
+		if (!$success) {
+			$this->logger->error("Failed to convert $sourcePath to $format");
+		}
+		
+		return $success;
+	}
+
+	/**
+	 * Convert an image file to both WebP and AVIF formats if enabled
+	 *
+	 * @param string $filePath Path to the image file
+	 * @return array Conversion results
+	 */
 	private function convertImage(string $filePath): array {
 		$result = [
 			'success' => false,
@@ -233,42 +374,91 @@ class MediaProcessor {
 			$this->logger->error("File not found: $filePath");
 			return $result;
 		}
-
-		$skipConverted = $this->settings->get('skip_converted');
 		
+		// Convert to WebP if enabled
 		if ($this->settings->get('enable_webp')) {
-			$webpPath = $this->getDestinationPath($filePath, 'webp');
-			
-			if (!$skipConverted || !file_exists($webpPath)) {
-				$result['webp'] = $this->webpConverter->convert(
-					$filePath, 
-					$webpPath, 
-					$this->getWebpSettings()
-				);
-				$this->logger->info("WebP conversion result for $filePath: " . ($result['webp'] ? 'success' : 'failed'));
-			} else {
-				$result['webp'] = true;
-				$this->logger->info("Skipping WebP conversion for $filePath (already exists)");
-			}
+			$result['webp'] = $this->convertFileToFormat(
+				$filePath, 
+				'webp', 
+				$this->webpConverter, 
+				$this->getWebpSettings()
+			);
 		}
 
+		// Convert to AVIF if enabled
 		if ($this->settings->get('enable_avif')) {
-			$avifPath = $this->getDestinationPath($filePath, 'avif');
-			
-			if (!$skipConverted || !file_exists($avifPath)) {
-				$result['avif'] = $this->avifConverter->convert(
-					$filePath, 
-					$avifPath, 
-					$this->getAvifSettings()
-				);
-				$this->logger->info("AVIF conversion result for $filePath: " . ($result['avif'] ? 'success' : 'failed'));
-			} else {
-				$result['avif'] = true;
-				$this->logger->info("Skipping AVIF conversion for $filePath (already exists)");
-			}
+			$result['avif'] = $this->convertFileToFormat(
+				$filePath, 
+				'avif', 
+				$this->avifConverter, 
+				$this->getAvifSettings()
+			);
 		}
 
 		$result['success'] = ($result['webp'] || $result['avif']);
+		return $result;
+	}
+	
+	/**
+	 * Convert a file to its optimal format based on content
+	 *
+	 * @param string $sourcePath Path to the source image
+	 * @return array Results with the selected formats and success status
+	 */
+	public function convertToOptimalFormat(string $sourcePath): array {
+		$result = [
+			'success' => false,
+			'webp' => false,
+			'avif' => false,
+			'selected_format' => null,
+		];
+
+		if (!file_exists($sourcePath) || !$this->isSupportedImage($sourcePath)) {
+			$this->logger->error("Invalid or unsupported file: $sourcePath");
+			return $result;
+		}
+
+		// Determine available formats
+		$availableFormats = [];
+		if ($this->settings->get('enable_webp', true) && $this->webpConverter->isSupported()) {
+			$availableFormats[] = 'webp';
+		}
+		if ($this->settings->get('enable_avif', true) && $this->avifConverter->isSupported()) {
+			$availableFormats[] = 'avif';
+		}
+
+		// Skip if no formats are available
+		if (empty($availableFormats)) {
+			$this->logger->warning("No conversion formats available for: $sourcePath");
+			return $result;
+		}
+
+		// Let the FormatSelector decide the optimal format
+		$optimalFormat = $this->formatSelector->determineOptimalFormat($sourcePath, $availableFormats);
+		
+		if (!$optimalFormat) {
+			$this->logger->warning("Could not determine optimal format for: $sourcePath");
+			return $result;
+		}
+
+		$result['selected_format'] = $optimalFormat;
+		$this->logger->info("Selected optimal format $optimalFormat for: $sourcePath");
+
+		// Convert to the optimal format
+		$converter = $optimalFormat === 'webp' ? $this->webpConverter : $this->avifConverter;
+		$options = $optimalFormat === 'webp' ? $this->getWebpSettings() : $this->getAvifSettings();
+		
+		$success = $this->convertFileToFormat($sourcePath, $optimalFormat, $converter, $options);
+		
+		// Update result
+		if ($optimalFormat === 'webp') {
+			$result['webp'] = $success;
+		} else if ($optimalFormat === 'avif') {
+			$result['avif'] = $success;
+		}
+		
+		$result['success'] = $success;
+		
 		return $result;
 	}
 	
