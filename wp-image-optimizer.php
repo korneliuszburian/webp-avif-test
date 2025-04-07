@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WebP & AVIF Image Optimizer
  * Description: High-performance WebP and AVIF conversion for WordPress images
- * Version: 1.0.26
+ * Version: 1.0.27
  * Author: WebP AVIF Team
  * License: GPL v2 or later
  * Text Domain: wp-image-optimizer
@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WP_IMAGE_OPTIMIZER_VERSION', '1.0.26' );
+define( 'WP_IMAGE_OPTIMIZER_VERSION', '1.0.27' );
 define( 'WP_IMAGE_OPTIMIZER_FILE', __FILE__ );
 define( 'WP_IMAGE_OPTIMIZER_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WP_IMAGE_OPTIMIZER_URL', plugin_dir_url( __FILE__ ) );
