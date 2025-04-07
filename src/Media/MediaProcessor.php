@@ -15,9 +15,15 @@ class MediaProcessor {
 		private ProgressManager $progressManager,
 		private Logger $logger,
 		private FormatSelector $formatSelector
-	) {}
+	) {
+		// Log startup so we can verify the processor is being initialized
+		$this->logger->info("MediaProcessor initialized");
+	}
 
 	public function processUploadedMedia( array $upload ): array {
+		// Log detailed information about the upload
+		$this->logger->info("Processing uploaded media with wp_handle_upload filter: " . json_encode($upload));
+
 		if ( ! $this->settings->get( 'auto_convert', true ) ) {
 			return $upload;
 		}
@@ -475,5 +481,71 @@ class MediaProcessor {
 			'speed' => $this->settings->get('avif_speed', 6),
 			'lossless' => $this->settings->get('avif_lossless', false),
 		];
+	}
+
+	/**
+	 * Process an attachment right after it has been uploaded
+	 * This is more reliable than the wp_handle_upload filter
+	 * 
+	 * @param int $attachmentId Attachment ID
+	 */
+	public function processAttachmentOnUpload(int $attachmentId): void {
+	    $this->logger->info("Processing newly uploaded attachment: $attachmentId");
+	    
+	    $file = get_attached_file($attachmentId);
+	    if (!$file || !$this->isSupportedImage($file)) {
+	        $this->logger->error("Invalid or unsupported file for attachment ID $attachmentId: " . ($file ?: 'null'));
+	        return;
+	    }
+	    
+	    if (!$this->settings->get('auto_convert', true)) {
+	        $this->logger->info("Auto-convert disabled, skipping attachment $attachmentId");
+	        return;
+	    }
+	    
+	    // We'll delay the actual conversion until metadata is generated
+	    // This hook is just to log that we're tracking the new attachment
+	    $this->logger->info("Attachment $attachmentId registered for conversion after metadata generation");
+	}
+	
+	/**
+	 * Process generated attachment metadata and convert images
+	 * This runs after WordPress has processed all image sizes
+	 * 
+	 * @param array $metadata Attachment metadata
+	 * @param int $attachmentId Attachment ID
+	 * @return array Modified metadata
+	 */
+	public function processGeneratedMetadata(array $metadata, int $attachmentId): array {
+	    if (!$this->settings->get('auto_convert', true)) {
+	        return $metadata;
+	    }
+	    
+	    $file = get_attached_file($attachmentId);
+	    if (!$file || !$this->isSupportedImage($file)) {
+	        return $metadata;
+	    }
+	    
+	    $this->logger->info("Converting new attachment with ID $attachmentId after metadata generation");
+	    
+	    // Convert main image
+	    if ($this->settings->get('enable_webp', true) && $this->webpConverter->isSupported()) {
+	        $webpSuccess = $this->convertToFormat($attachmentId, 'webp');
+	        $this->logger->info("WebP conversion for attachment $attachmentId: " . ($webpSuccess ? 'success' : 'failed'));
+	    }
+	    
+	    if ($this->settings->get('enable_avif', true) && $this->avifConverter->isSupported()) {
+	        $avifSuccess = $this->convertToFormat($attachmentId, 'avif');
+	        $this->logger->info("AVIF conversion for attachment $attachmentId: " . ($avifSuccess ? 'success' : 'failed'));
+	    }
+	    
+	    // Convert thumbnails if enabled
+	    if ($this->settings->get('convert_thumbnails') && isset($metadata['sizes']) && is_array($metadata['sizes'])) {
+	        $this->logger->info("Converting thumbnails for attachment $attachmentId");
+	        $thumbnailResults = $this->convertThumbnails($attachmentId);
+	        $this->logger->info("Thumbnail conversion results - converted: {$thumbnailResults['converted']}, failed: {$thumbnailResults['failed']}");
+	    }
+	    
+	    return $metadata;
 	}
 }
