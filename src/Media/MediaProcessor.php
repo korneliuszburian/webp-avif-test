@@ -15,15 +15,9 @@ class MediaProcessor {
 		private ProgressManager $progressManager,
 		private Logger $logger,
 		private FormatSelector $formatSelector
-	) {
-		// Log startup so we can verify the processor is being initialized
-		$this->logger->info("MediaProcessor initialized");
-	}
+	) {}
 
 	public function processUploadedMedia( array $upload ): array {
-		// Log detailed information about the upload
-		$this->logger->info("Processing uploaded media with wp_handle_upload filter: " . json_encode($upload));
-
 		if ( ! $this->settings->get( 'auto_convert', true ) ) {
 			return $upload;
 		}
@@ -49,6 +43,72 @@ class MediaProcessor {
 		}
 
 		return $upload;
+	}
+
+	/**
+	 * Process an attachment right after it has been uploaded
+	 * This is more reliable than the wp_handle_upload filter
+	 *
+	 * @param int $attachmentId Attachment ID
+	 */
+	public function processAttachmentOnUpload(int $attachmentId): void {
+	    $this->logger->info("Processing newly uploaded attachment: $attachmentId");
+
+	    $file = get_attached_file($attachmentId);
+	    if (!$file || !$this->isSupportedImage($file)) {
+	        $this->logger->error("Invalid or unsupported file for attachment ID $attachmentId: " . ($file ?: 'null'));
+	        return;
+	    }
+
+	    if (!$this->settings->get('auto_convert', true)) {
+	        $this->logger->info("Auto-convert disabled, skipping attachment $attachmentId");
+	        return;
+	    }
+
+	    // We'll delay the actual conversion until metadata is generated
+	    // This hook is just to log that we're tracking the new attachment
+	    $this->logger->info("Attachment $attachmentId registered for conversion after metadata generation");
+	}
+
+	/**
+	 * Process generated attachment metadata and convert images
+	 * This runs after WordPress has processed all image sizes
+	 *
+	 * @param array $metadata Attachment metadata
+	 * @param int $attachmentId Attachment ID
+	 * @return array Modified metadata
+	 */
+	public function processGeneratedMetadata(array $metadata, int $attachmentId): array {
+	    if (!$this->settings->get('auto_convert', true)) {
+	        return $metadata;
+	    }
+
+	    $file = get_attached_file($attachmentId);
+	    if (!$file || !$this->isSupportedImage($file)) {
+	        return $metadata;
+	    }
+
+	    $this->logger->info("Converting new attachment with ID $attachmentId after metadata generation");
+
+	    // Convert main image
+	    if ($this->settings->get('enable_webp', true) && $this->webpConverter->isSupported()) {
+	        $webpSuccess = $this->convertToFormat($attachmentId, 'webp');
+	        $this->logger->info("WebP conversion for attachment $attachmentId: " . ($webpSuccess ? 'success' : 'failed'));
+	    }
+
+	    if ($this->settings->get('enable_avif', true) && $this->avifConverter->isSupported()) {
+	        $avifSuccess = $this->convertToFormat($attachmentId, 'avif');
+	        $this->logger->info("AVIF conversion for attachment $attachmentId: " . ($avifSuccess ? 'success' : 'failed'));
+	    }
+
+	    // Convert thumbnails if enabled
+	    if ($this->settings->get('convert_thumbnails') && isset($metadata['sizes']) && is_array($metadata['sizes'])) {
+	        $this->logger->info("Converting thumbnails for attachment $attachmentId");
+	        $thumbnailResults = $this->convertThumbnails($attachmentId);
+	        $this->logger->info("Thumbnail conversion results - converted: {$thumbnailResults['converted']}, failed: {$thumbnailResults['failed']}");
+	    }
+
+	    return $metadata;
 	}
 
 	/**
@@ -88,10 +148,10 @@ class MediaProcessor {
 			$thumbnailResults = $this->convertThumbnails($attachmentId);
 			$result['thumbnails'] = $thumbnailResults;
 			$result['success'] = $result['webp'] || $result['avif'] || $thumbnailResults['success'];
-			
+
 			// Log a summary of the thumbnail conversion
-			$this->logger->info("Thumbnails converted: {$thumbnailResults['converted']}, " . 
-							"failed: {$thumbnailResults['failed']}, " . 
+			$this->logger->info("Thumbnails converted: {$thumbnailResults['converted']}, " .
+							"failed: {$thumbnailResults['failed']}, " .
 							"skipped: {$thumbnailResults['skipped']}");
 		} else {
 			$result['success'] = $result['webp'] || $result['avif'];
@@ -157,7 +217,7 @@ class MediaProcessor {
 		// Convert the file
 		$converter = $format === 'webp' ? $this->webpConverter : $this->avifConverter;
 		$options = $format === 'webp' ? $this->getWebpSettings() : $this->getAvifSettings();
-		
+
 		$success = $this->convertFileToFormat($file, $format, $converter, $options);
 
 		// Update metadata if conversion was successful
@@ -168,11 +228,11 @@ class MediaProcessor {
 				$meta = array();
 				$this->logger->warning("No metadata found for attachment ID: $attachmentId, creating new metadata");
 			}
-			
+
 			$meta["{$format}_path"] = $destPath;
 			$meta["{$format}_url"] = $this->getWebUrl($destPath);
 			wp_update_attachment_metadata($attachmentId, $meta);
-			
+
 			$this->logger->info("Updated metadata for attachment ID: $attachmentId with $format path: $destPath");
 		}
 
@@ -191,21 +251,21 @@ class MediaProcessor {
 		$dirname = $pathInfo['dirname'];
 		$filename = $pathInfo['filename'];
 		$originalExt = strtolower($pathInfo['extension'] ?? '');
-		
+
 		// Check for common format indicators in filename (_jpg, _png, _webp, _avif)
 		$formatPatterns = ['_jpg', '_jpeg', '_png', '_gif', '_webp', '_avif'];
 		$hasFormatPattern = false;
-		
+
 		foreach ($formatPatterns as $pattern) {
 			if (str_ends_with(strtolower($filename), $pattern)) {
 				$hasFormatPattern = true;
-				
+
 				// If converting to the same format that's in the filename, keep original name
 				// e.g., "image_avif.jpg" converting to avif should become "image_avif.avif"
 				if (str_ends_with(strtolower($filename), "_{$format}")) {
 					return "{$dirname}/{$filename}.{$format}";
 				}
-				
+
 				// Replace the existing format indicator with the new one
 				// e.g., "image_png.jpg" to "image_avif.avif"
 				foreach ($formatPatterns as $oldPattern) {
@@ -216,7 +276,7 @@ class MediaProcessor {
 				}
 			}
 		}
-		
+
 		// Standard case - just append the new extension
 		return "{$dirname}/{$filename}.{$format}";
 	}
@@ -261,7 +321,7 @@ class MediaProcessor {
 	 */
 	private function convertThumbnails(int $attachmentId): array {
 		$this->logger->info("Converting thumbnails for attachment ID: $attachmentId");
-		
+
 		$metadata = wp_get_attachment_metadata($attachmentId);
 		$results = [
 			'success' => false,
@@ -269,42 +329,42 @@ class MediaProcessor {
 			'failed' => 0,
 			'skipped' => 0,
 		];
-		
+
 		if (!isset($metadata['sizes']) || !is_array($metadata['sizes'])) {
 			$this->logger->warning("No sizes found for attachment ID: $attachmentId");
 			return $results;
 		}
-		
+
 		$originalFilePath = get_attached_file($attachmentId);
 		if (!$originalFilePath) {
 			$this->logger->error("Original file not found for attachment ID: $attachmentId");
 			return $results;
 		}
-		
+
 		// Initialize thumbnail_conversions in metadata if it doesn't exist
 		if (!isset($metadata['thumbnail_conversions']) || !is_array($metadata['thumbnail_conversions'])) {
 			$metadata['thumbnail_conversions'] = [];
 		}
-		
+
 		$baseDir = dirname($originalFilePath);
-		
+
 		foreach ($metadata['sizes'] as $size => $sizeData) {
 			if (!isset($sizeData['file'])) {
 				continue;
 			}
-			
+
 			$thumbnailPath = $baseDir . '/' . $sizeData['file'];
-			
+
 			if (file_exists($thumbnailPath)) {
 				$this->logger->info("Converting thumbnail: $thumbnailPath");
-				
+
 				$conversionResult = $this->convertImage($thumbnailPath);
-				
+
 				// Store the conversion results in metadata
 				if ($conversionResult['success']) {
 					$results['converted']++;
 					$results['success'] = true;
-					
+
 					// Update thumbnail conversion metadata
 					$metadata['thumbnail_conversions'][$size] = [
 						'webp' => $conversionResult['webp'] ? $this->getDestinationPath($thumbnailPath, 'webp') : null,
@@ -320,13 +380,13 @@ class MediaProcessor {
 				$results['skipped']++;
 			}
 		}
-		
+
 		// Update the metadata with thumbnail conversion information
 		if ($results['converted'] > 0) {
 			wp_update_attachment_metadata($attachmentId, $metadata);
 			$this->logger->info("Updated thumbnail conversion metadata for attachment ID: $attachmentId");
 		}
-		
+
 		return $results;
 	}
 
@@ -346,20 +406,20 @@ class MediaProcessor {
 		}
 
 		$destPath = $this->getDestinationPath($sourcePath, $format);
-		
+
 		// Skip if the file already exists and skip_converted is enabled
 		if ($this->settings->get('skip_converted', false) && file_exists($destPath)) {
 			$this->logger->info("Skipping conversion for $sourcePath - $format version already exists");
 			return true;
 		}
-		
+
 		$this->logger->info("Converting $sourcePath to $format at $destPath");
 		$success = $converter->convert($sourcePath, $destPath, $options);
-		
+
 		if (!$success) {
 			$this->logger->error("Failed to convert $sourcePath to $format");
 		}
-		
+
 		return $success;
 	}
 
@@ -380,13 +440,13 @@ class MediaProcessor {
 			$this->logger->error("File not found: $filePath");
 			return $result;
 		}
-		
+
 		// Convert to WebP if enabled
 		if ($this->settings->get('enable_webp')) {
 			$result['webp'] = $this->convertFileToFormat(
-				$filePath, 
-				'webp', 
-				$this->webpConverter, 
+				$filePath,
+				'webp',
+				$this->webpConverter,
 				$this->getWebpSettings()
 			);
 		}
@@ -394,9 +454,9 @@ class MediaProcessor {
 		// Convert to AVIF if enabled
 		if ($this->settings->get('enable_avif')) {
 			$result['avif'] = $this->convertFileToFormat(
-				$filePath, 
-				'avif', 
-				$this->avifConverter, 
+				$filePath,
+				'avif',
+				$this->avifConverter,
 				$this->getAvifSettings()
 			);
 		}
@@ -404,7 +464,7 @@ class MediaProcessor {
 		$result['success'] = ($result['webp'] || $result['avif']);
 		return $result;
 	}
-	
+
 	/**
 	 * Convert a file to its optimal format based on content
 	 *
@@ -441,7 +501,7 @@ class MediaProcessor {
 
 		// Let the FormatSelector decide the optimal format
 		$optimalFormat = $this->formatSelector->determineOptimalFormat($sourcePath, $availableFormats);
-		
+
 		if (!$optimalFormat) {
 			$this->logger->warning("Could not determine optimal format for: $sourcePath");
 			return $result;
@@ -453,99 +513,33 @@ class MediaProcessor {
 		// Convert to the optimal format
 		$converter = $optimalFormat === 'webp' ? $this->webpConverter : $this->avifConverter;
 		$options = $optimalFormat === 'webp' ? $this->getWebpSettings() : $this->getAvifSettings();
-		
+
 		$success = $this->convertFileToFormat($sourcePath, $optimalFormat, $converter, $options);
-		
+
 		// Update result
 		if ($optimalFormat === 'webp') {
 			$result['webp'] = $success;
 		} else if ($optimalFormat === 'avif') {
 			$result['avif'] = $success;
 		}
-		
+
 		$result['success'] = $success;
-		
+
 		return $result;
 	}
-	
+
 	private function getWebpSettings(): array {
 		return [
 			'quality' => $this->settings->get('webp_quality', 80),
 			'lossless' => $this->settings->get('webp_lossless', false),
 		];
 	}
-	
+
 	private function getAvifSettings(): array {
 		return [
 			'quality' => $this->settings->get('avif_quality', 80),
 			'speed' => $this->settings->get('avif_speed', 6),
 			'lossless' => $this->settings->get('avif_lossless', false),
 		];
-	}
-
-	/**
-	 * Process an attachment right after it has been uploaded
-	 * This is more reliable than the wp_handle_upload filter
-	 * 
-	 * @param int $attachmentId Attachment ID
-	 */
-	public function processAttachmentOnUpload(int $attachmentId): void {
-	    $this->logger->info("Processing newly uploaded attachment: $attachmentId");
-	    
-	    $file = get_attached_file($attachmentId);
-	    if (!$file || !$this->isSupportedImage($file)) {
-	        $this->logger->error("Invalid or unsupported file for attachment ID $attachmentId: " . ($file ?: 'null'));
-	        return;
-	    }
-	    
-	    if (!$this->settings->get('auto_convert', true)) {
-	        $this->logger->info("Auto-convert disabled, skipping attachment $attachmentId");
-	        return;
-	    }
-	    
-	    // We'll delay the actual conversion until metadata is generated
-	    // This hook is just to log that we're tracking the new attachment
-	    $this->logger->info("Attachment $attachmentId registered for conversion after metadata generation");
-	}
-	
-	/**
-	 * Process generated attachment metadata and convert images
-	 * This runs after WordPress has processed all image sizes
-	 * 
-	 * @param array $metadata Attachment metadata
-	 * @param int $attachmentId Attachment ID
-	 * @return array Modified metadata
-	 */
-	public function processGeneratedMetadata(array $metadata, int $attachmentId): array {
-	    if (!$this->settings->get('auto_convert', true)) {
-	        return $metadata;
-	    }
-	    
-	    $file = get_attached_file($attachmentId);
-	    if (!$file || !$this->isSupportedImage($file)) {
-	        return $metadata;
-	    }
-	    
-	    $this->logger->info("Converting new attachment with ID $attachmentId after metadata generation");
-	    
-	    // Convert main image
-	    if ($this->settings->get('enable_webp', true) && $this->webpConverter->isSupported()) {
-	        $webpSuccess = $this->convertToFormat($attachmentId, 'webp');
-	        $this->logger->info("WebP conversion for attachment $attachmentId: " . ($webpSuccess ? 'success' : 'failed'));
-	    }
-	    
-	    if ($this->settings->get('enable_avif', true) && $this->avifConverter->isSupported()) {
-	        $avifSuccess = $this->convertToFormat($attachmentId, 'avif');
-	        $this->logger->info("AVIF conversion for attachment $attachmentId: " . ($avifSuccess ? 'success' : 'failed'));
-	    }
-	    
-	    // Convert thumbnails if enabled
-	    if ($this->settings->get('convert_thumbnails') && isset($metadata['sizes']) && is_array($metadata['sizes'])) {
-	        $this->logger->info("Converting thumbnails for attachment $attachmentId");
-	        $thumbnailResults = $this->convertThumbnails($attachmentId);
-	        $this->logger->info("Thumbnail conversion results - converted: {$thumbnailResults['converted']}, failed: {$thumbnailResults['failed']}");
-	    }
-	    
-	    return $metadata;
 	}
 }
