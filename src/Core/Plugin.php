@@ -70,6 +70,10 @@ class Plugin
 
     // Hook into WordPress upload process
     add_filter('wp_handle_upload', array($this->container->get('media_processor'), 'processUploadedMedia'));
+    
+    // Additional hooks for more reliable image processing
+    add_action('add_attachment', array($this->container->get('media_processor'), 'processAttachmentOnUpload'));
+    add_filter('wp_generate_attachment_metadata', array($this->container->get('media_processor'), 'processGeneratedMetadata'), 10, 2);
   }
 
   /**
