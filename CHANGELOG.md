@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.30] - 2025-06-06
+
+- Remove unused version script from package.json.
+- Feature: ✨ Add batch processing and debug log management for image conversion
+- Update release info for v1.0.29.
+
+
 ## [1.0.26] - 2025-03-21
 
 - Remove: 🚮 Delete debug-gh-pages.md as it is no longer needed.
