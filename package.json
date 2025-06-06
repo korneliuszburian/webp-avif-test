@@ -5,8 +5,8 @@
   "private": true,
   "scripts": {
     "build": "composer install --no-dev --optimize-autoloader && node scripts/build.js",
-    "release": "node scripts/create-release.js",
-    "version": "node scripts/check-version.js"
+    "release": "node scripts/create-release.js"
+
   },
   "devDependencies": {
     "archiver": "^6.0.1"
