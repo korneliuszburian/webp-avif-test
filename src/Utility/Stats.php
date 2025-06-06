@@ -20,19 +20,28 @@ class Stats {
 		$imageAttachments = $wpdb->get_results(
 			"SELECT ID, post_mime_type FROM {$wpdb->posts} 
             WHERE post_type = 'attachment' 
-            AND post_mime_type LIKE 'image/%'
-            AND post_mime_type NOT LIKE 'image/webp'
-            AND post_mime_type NOT LIKE 'image/avif'"
+            AND post_mime_type IN ('image/jpeg', 'image/png')"
 		);
 
 		$results['total'] = count( $imageAttachments );
 
-		// Count conversions
+		$missingFiles = 0;
 		foreach ( $imageAttachments as $attachment ) {
 			$meta = wp_get_attachment_metadata( $attachment->ID );
 
+			if (!is_array($meta)) {
+				continue;
+			}
+
 			$hasWebp = ! empty( $meta['webp_path'] ) && file_exists( $meta['webp_path'] );
 			$hasAvif = ! empty( $meta['avif_path'] ) && file_exists( $meta['avif_path'] );
+			
+			if (!empty($meta['webp_path']) && !file_exists($meta['webp_path'])) {
+				$missingFiles++;
+			}
+			if (!empty($meta['avif_path']) && !file_exists($meta['avif_path'])) {
+				$missingFiles++;
+			}
 
 			if ( $hasWebp ) {
 				++$results['webp'];
@@ -45,6 +54,11 @@ class Stats {
 			if ( $hasWebp && $hasAvif ) {
 				++$results['both'];
 			}
+		}
+		
+		// Log some debug info if there are missing files
+		if ($missingFiles > 0) {
+			error_log("WP Image Optimizer: Found $missingFiles missing converted files that are referenced in metadata");
 		}
 
 		return $results;
@@ -68,9 +82,7 @@ class Stats {
 		$imageAttachments = $wpdb->get_results(
 			"SELECT ID, post_mime_type FROM {$wpdb->posts} 
             WHERE post_type = 'attachment' 
-            AND post_mime_type LIKE 'image/%'
-            AND post_mime_type NOT LIKE 'image/webp'
-            AND post_mime_type NOT LIKE 'image/avif'"
+            AND post_mime_type IN ('image/jpeg', 'image/png')"
 		);
 
 		// Calculate sizes
@@ -123,11 +135,7 @@ class Stats {
 		return (int) $wpdb->get_var(
 			"SELECT COUNT(*) FROM {$wpdb->posts} 
             WHERE post_type = 'attachment' 
-            AND (
-                post_mime_type LIKE 'image/jpeg' OR
-                post_mime_type LIKE 'image/jpg' OR
-                post_mime_type LIKE 'image/png'
-            )"
+            AND post_mime_type IN ('image/jpeg', 'image/png')"
 		);
 	}
 }

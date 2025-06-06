@@ -214,6 +214,23 @@ class MediaProcessor {
 			return false;
 		}
 
+		// Check if file already exists and skip_converted is enabled
+		$destPath = $this->getDestinationPath($file, $format);
+		if ($this->settings->get('skip_converted', false) && file_exists($destPath)) {
+			$this->logger->info("Skipping conversion for attachment ID: $attachmentId, $format file already exists: $destPath");
+			
+			// Ensure metadata is updated even if we skip conversion
+			$meta = wp_get_attachment_metadata($attachmentId);
+			if (is_array($meta) && empty($meta["{$format}_path"])) {
+				$meta["{$format}_path"] = $destPath;
+				$meta["{$format}_url"] = $this->getWebUrl($destPath);
+				wp_update_attachment_metadata($attachmentId, $meta);
+				$this->logger->info("Updated metadata for attachment ID: $attachmentId with existing $format path: $destPath");
+			}
+			
+			return true; // Return true since file exists
+		}
+
 		// Convert the file
 		$converter = $format === 'webp' ? $this->webpConverter : $this->avifConverter;
 		$options = $format === 'webp' ? $this->getWebpSettings() : $this->getAvifSettings();
@@ -222,7 +239,6 @@ class MediaProcessor {
 
 		// Update metadata if conversion was successful
 		if ($success) {
-			$destPath = $this->getDestinationPath($file, $format);
 			$meta = wp_get_attachment_metadata($attachmentId);
 			if (!is_array($meta)) {
 				$meta = array();

@@ -14,10 +14,9 @@
         
         let processId = '';
         let total = 0;
-        let intervalId = null;
         
         $button.on('click', function() {
-            $(this).prop('disabled', true).text('Processing...');
+            $(this).prop('disabled', true).text('Starting...');
             $progress.show();
             
             // Start bulk conversion
@@ -34,8 +33,9 @@
                         processId = response.data.process_id;
                         total = response.data.total;
                         
-                        // Start progress polling
-                        intervalId = setInterval(pollProgress, 1000);
+                        // Start processing batches immediately
+                        $button.text('Processing...');
+                        processBatch();
                     } else {
                         handleError(response.data.message);
                     }
@@ -47,38 +47,38 @@
             });
         });
         
-        function pollProgress() {
+        function processBatch() {
             $.ajax({
                 url: wpImageOptimizer.ajax_url,
                 type: 'POST',
                 data: {
-                    action: 'wp_image_optimizer_get_progress',
+                    action: 'wp_image_optimizer_process_batch',
                     nonce: wpImageOptimizer.nonce,
                     process_id: processId
                 },
                 success: function(response) {
-                    console.log('Progress update:', response);
+                    console.log('Batch processed:', response);
                     if (response.success) {
                         updateProgress(response.data);
                         
-                        // Check if process is complete
-                        if (response.data.processed >= total) {
-                            clearInterval(intervalId);
+                        if (response.data.complete) {
                             $button.text('Conversion Complete').removeClass('button-primary');
                             
                             // Reload after 2 seconds to update statistics
                             setTimeout(function() {
                                 window.location.reload();
                             }, 2000);
+                        } else {
+                            // Process next batch after a short delay
+                            setTimeout(processBatch, 500);
                         }
                     } else {
-                        console.error('Progress check failed:', response);
-                        // Don't stop on a single error, try again next interval
+                        handleError(response.data.message);
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error('Progress check error:', xhr, status, error);
-                    // Don't stop on a single error, try again next interval
+                    console.error('Batch processing error:', xhr, status, error);
+                    handleError('Batch processing failed: ' + error);
                 }
             });
         }
@@ -93,7 +93,6 @@
         }
         
         function handleError(message) {
-            clearInterval(intervalId);
             $button.prop('disabled', false).text('Retry Conversion');
             console.error('Error:', message);
             alert('Error: ' + message);
